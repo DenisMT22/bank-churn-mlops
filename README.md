@@ -1,6 +1,9 @@
 # Bank Churn Prediction - Pipeline MLOps Complet
 
+
 La présentation + La vidéo du pipeline MLOpss au complet sont consultables via ce lien https://drive.google.com/drive/folders/1bGnrVLeOrvdb0vtf8ifiAq_58H_oSlTe?usp=sharing
+
+
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
