@@ -1,0 +1,197 @@
+name: Automated Model Retraining
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_source:
+        description: 'Source des données (gcs/local)'
+        required: true
+        default: 'gcs'
+        type: choice
+        options:
+          - gcs
+          - local
+  schedule:
+    - cron: '0 2 * * 1'
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/raw/*.csv'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  check-retraining-need:
+    runs-on: ubuntu-latest
+    outputs:
+      needs_retraining: ${{ steps.check.outputs.needs_retraining }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install pandas numpy scikit-learn evidently joblib google-cloud-storage
+      - uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - run: |
+          mkdir -p data/production models/trained
+          gsutil cp gs://${{ env.PROJECT_ID }}-data/production_data_latest.csv data/production/ || true
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/
+      - id: check
+        run: |
+          python src/monitoring/check_drift.py --reference data/raw/Churn_Modelling.csv --current data/production/production_data_latest.csv --output monitoring/drift_check.json || true
+          if [ -f monitoring/drift_check.json ]; then
+            NEEDS_RETRAINING=$(python -c "import json; print(json.load(open('monitoring/drift_check.json'))['needs_retraining'])")
+            echo "needs_retraining=$NEEDS_RETRAINING" >> $GITHUB_OUTPUT
+          else
+            echo "needs_retraining=true" >> $GITHUB_OUTPUT
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: monitoring-report
+          path: monitoring/
+          retention-days: 30
+
+  retrain-model:
+    needs: check-retraining-need
+    if: needs.check-retraining-need.outputs.needs_retraining == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - run: |
+          mkdir -p models/trained
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/ || true
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/ || true
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/ || true
+      - run: |
+          if [ "${{ github.event.inputs.data_source }}" == "gcs" ]; then
+            gsutil cp gs://${{ env.PROJECT_ID }}-data/training_data_latest.csv data/raw/Bank_Churn_Prediction.csv || true
+          else
+            echo "Using local training data"
+          fi
+      - id: retrain
+        run: |
+          cd src/models
+          python retrain.py
+          if [ -f ../../models/retraining_summary.json ]; then
+            MODEL_DEPLOYED=$(python -c "import json; print(json.load(open('../../models/retraining_summary.json'))['model_deployed'])")
+            echo "model_deployed=$MODEL_DEPLOYED" >> $GITHUB_OUTPUT
+          else
+            echo "model_deployed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Upload model to GCS
+        if: steps.retrain.outputs.model_deployed == 'true'
+        run: |
+          gsutil cp models/trained/model_latest.pkl gs://${{ env.PROJECT_ID }}-models/
+          gsutil cp models/preprocessor.pkl gs://${{ env.PROJECT_ID }}-models/
+          gsutil cp models/model_metadata.json gs://${{ env.PROJECT_ID }}-models/
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          gsutil cp models/trained/model_latest.pkl gs://${{ env.PROJECT_ID }}-models/backups/model_${TIMESTAMP}.pkl
+          echo "Model uploaded to GCS"
+      - name: Upload training artifacts
+        if: steps.retrain.outputs.model_deployed == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: training-artifacts
+          path: |
+            models/
+            docs/
+          retention-days: 90
+      - name: Create retraining report
+        if: steps.retrain.outputs.model_deployed == 'true'
+        run: |
+          echo "# 🔄 Retraining Report" > retraining_report.md
+          echo "" >> retraining_report.md
+          echo "**Date:** $(date)" >> retraining_report.md
+          echo "**Workflow:** ${{ github.workflow }}" >> retraining_report.md
+          echo "**Run ID:** ${{ github.run_id }}" >> retraining_report.md
+          echo "" >> retraining_report.md
+          if [ -f models/retraining_summary.json ]; then
+            echo "## Summary" >> retraining_report.md
+            python3 - << 'PY' >> retraining_report.md
+            import json
+            summary = json.load(open('models/retraining_summary.json'))
+            print(f"- **Success:** {summary['success']}")
+            print(f"- **Model Deployed:** {summary['model_deployed']}")
+            print(f"- **Reason:** {summary['reason']}")
+            print(f"- **Duration:** {summary['duration_seconds']:.2f}s")
+            if 'new_model' in summary.get('metrics', {}):
+                print('\n## New Model Metrics')
+                for k, v in summary['metrics']['new_model'].items():
+                    print(f'- **{k}:** {v:.4f}')
+            PY
+          fi
+      - name: Comment retraining report on PR
+        if: github.event_name == 'pull_request' && steps.retrain.outputs.model_deployed == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('retraining_report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            })
+  redeploy_api:
+    needs: retrain-model
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: google-github-actions/setup-gcloud@v1
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+    - run: gcloud auth configure-docker
+    - run: |
+        mkdir -p models/trained
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/
+    - run: |
+        docker build -f deployment/Dockerfile \
+        -t gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }} \
+        -t gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:latest \
+        .
+    - run: |
+        docker push gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }}
+        docker push gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:latest
+    - run: |
+        gcloud run deploy churn-prediction-api \
+        --image gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }} \
+        --region europe-west1 \
+        --platform managed \
+        --allow-unauthenticated \
+        --memory 2Gi \
+        --cpu 2
+    - run: |
+        SERVICE_URL=$(gcloud run services describe churn-prediction-api --region europe-west1 --format 'value(status.url)')
+        echo "Testing API at $SERVICE_URL"
+        sleep 10
+        curl -f $SERVICE_URL/health || exit 1
+        curl -f $SERVICE_URL/metrics || exit 1
+        echo "✅ API déployée et fonctionnelle"
+    - if: success()
+      run: echo "✅ Réentraînement et redéploiement réussis\nNouveau modèle en production"
+    - if: failure()
+      run: |
+        echo "❌ Échec du déploiement, rollback..."
+        gcloud run services update-traffic churn-prediction-api --region europe-west1 --to-revisions LATEST=0 --to-revisions retrained-$((github.run_number - 1))=100 || true
