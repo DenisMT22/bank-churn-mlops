@@ -6,7 +6,6 @@ La présentation + La vidéo du pipeline MLOpss au complet sont consultables via
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
 [![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-orange.svg)](https://cloud.google.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-black.svg)](https://github.com/features/actions)
 
 > **Pipeline MLOps de bout en bout** pour la prédiction du churn bancaire : de l'entraînement du modèle au déploiement en production avec monitoring automatisé.
