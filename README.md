@@ -1,7 +1,7 @@
 # Bank Churn Prediction - Pipeline MLOps Complet
 
 
-La présentation + La vidéo du pipeline MLOpss au complet sont consultables via ce lien https://drive.google.com/drive/folders/1bGnrVLeOrvdb0vtf8ifiAq_58H_oSlTe?usp=sharing
+La présentation + La vidéo du pipeline MLOps au complet sont consultables via ce lien https://drive.google.com/drive/folders/1bGnrVLeOrvdb0vtf8ifiAq_58H_oSlTe?usp=sharing
 
 
 
