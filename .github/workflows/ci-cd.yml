@@ -19,7 +19,7 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: europe-west1
   SERVICE_NAME: churn-prediction-api
-  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/churn-prediction-api
+  IMAGE_NAME: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/churn-prediction-api/churn-prediction-api
 
 jobs:
   # ========================================
@@ -87,8 +87,8 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
         
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker europe-west1-docker.pkg.dev
       
       - name: Create model files if not exist
         run: |
@@ -112,7 +112,7 @@ jobs:
           docker stop test-api
           docker rm test-api
       
-      - name: Push to Google Container Registry
+      - name: Push to Artifact Registry
         run: |
           docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.IMAGE_NAME }}:latest
