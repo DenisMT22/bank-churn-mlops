@@ -167,16 +167,23 @@ jobs:
       
       - name: Smoke tests on production
         run: |
+          set -e
+          BASE_URL=${{ steps.get-url.outputs.SERVICE_URL }}
+
           echo "⏳ Attente du démarrage de l'application..."
-          sleep 30
+          for i in {1..10}; do
+            echo "Tentative $i sur /health..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/health" || echo "000")
+            if [ "$STATUS" -eq 200 ]; then
+              echo "✅ /health OK (200)"
+              break
+            fi
+            echo "Status = $STATUS, nouvelle tentative dans 5s"
+            sleep 5
+          done
 
-          echo "🔎 Vérification /health (accepte non-2xx mais log la réponse)"
-          curl -s -S ${{ steps.get-url.outputs.SERVICE_URL }}/health || true
-
-          echo "🔎 Vérification /metrics (accepte non-2xx mais log la réponse)"
-          curl -s -S ${{ steps.get-url.outputs.SERVICE_URL }}/metrics || true
-
-          echo "✅ Smoke tests terminés (non bloquants)"
+          echo "🔎 Lecture des métriques (non bloquant)"
+          curl -s "$BASE_URL/metrics" || true
       
       - name: Create deployment annotation
         run: |
