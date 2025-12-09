@@ -202,13 +202,7 @@ jobs:
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "❌ Échec du déploiement - Rollback"
-          PREV_RUN_NUMBER=$(( ${{ github.run_number }} - 1 ))
-          echo "Previous run number: $PREV_RUN_NUMBER"
-          gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
-            --region ${{ env.REGION }} \
-            --to-revisions LATEST=0 \
-            --to-revisions v${PREV_RUN_NUMBER}=100 || true
+          echo "❌ Échec du déploiement - Rollback (pas de rollback automatique configuré)"
 
   # ========================================
   # JOB 4: SECURITY SCAN
