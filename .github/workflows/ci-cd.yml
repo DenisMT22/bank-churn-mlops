@@ -189,8 +189,7 @@ jobs:
         run: |
           gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
             --region ${{ env.REGION }} \
-            --to-latest \
-            --tag v${{ github.run_number }}
+            --to-latest            
       
       - name: Notify deployment success
         if: success()
