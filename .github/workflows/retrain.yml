@@ -54,7 +54,7 @@ jobs:
           else
             echo "needs_retraining=true" >> $GITHUB_OUTPUT
           fi
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: monitoring-report
           path: monitoring/
@@ -107,7 +107,7 @@ jobs:
           echo "Model uploaded to GCS"
       - name: Upload training artifacts
         if: steps.retrain.outputs.model_deployed == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: training-artifacts
           path: |
