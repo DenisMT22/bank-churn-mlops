@@ -181,9 +181,9 @@ jobs:
     - run: gcloud auth configure-docker
     - run: |
         mkdir -p models/trained
-        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/
-        gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/
-        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/ || true
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/ || true
+        gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/ || true
     - run: |
         docker build -f deployment/Dockerfile \
         -t gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }} \
