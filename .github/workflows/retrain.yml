@@ -212,4 +212,10 @@ jobs:
     - if: failure()
       run: |
         echo "❌ Échec du déploiement, rollback..."
-        gcloud run services update-traffic churn-prediction-api --region europe-west1 --to-revisions LATEST=0 --to-revisions retrained-$((github.run_number - 1))=100 || true
+        PREV_RUN_NUMBER=$(( ${{ github.run_number }} - 1 ))
+        echo "Rollback vers la révision retrained-$PREV_RUN_NUMBER (si elle existe)"
+
+        gcloud run services update-traffic churn-prediction-api \
+          --region europe-west1 \
+          --to-revisions LATEST=0 \
+          --to-revisions=retrained-$PREV_RUN_NUMBER=100 || true
