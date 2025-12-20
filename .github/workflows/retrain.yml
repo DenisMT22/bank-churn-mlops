@@ -47,9 +47,9 @@ jobs:
       - run: |
           mkdir -p data/production models/trained
           gsutil cp gs://${{ env.PROJECT_ID }}-data/production_data_latest.csv data/production/ || true
-          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/
-          gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/
-          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_latest.pkl models/trained/ || true
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/preprocessor.pkl src/models/ || true
+          gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/ || true
       - id: check
         run: |
           python src/monitoring/check_drift.py --reference data/raw/Churn_Modelling.csv --current data/production/production_data_latest.csv --output monitoring/drift_check.json || true
