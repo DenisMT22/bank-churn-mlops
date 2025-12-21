@@ -22,6 +22,9 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   PYTHON_VERSION: '3.10'
+  REGION: europe-west1
+  SERVICE_NAME: churn-prediction-api
+  IMAGE_NAME: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/churn-prediction-api/churn-prediction-api
 
 jobs:
   check-retraining-need:
@@ -186,20 +189,20 @@ jobs:
         gsutil cp gs://${{ env.PROJECT_ID }}-models/model_metadata.json models/ || true
     - run: |
         docker build -f deployment/Dockerfile \
-        -t gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }} \
-        -t gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:latest \
+        -t ${{ env.IMAGE_NAME }}:retrained-${{ github.run_number }} \
+        -t ${{ env.IMAGE_NAME }}:latest \
         .
     - run: |
-        docker push gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }}
-        docker push gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:latest
+        docker push ${{ env.IMAGE_NAME }}:retrained-${{ github.run_number }}
+        docker push ${{ env.IMAGE_NAME }}:latest
     - run: |
-        gcloud run deploy churn-prediction-api \
-        --image gcr.io/${{ env.PROJECT_ID }}/churn-prediction-api:retrained-${{ github.run_number }} \
-        --region europe-west1 \
-        --platform managed \
-        --allow-unauthenticated \
-        --memory 2Gi \
-        --cpu 2
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image ${{ env.IMAGE_NAME }}:retrained-${{ github.run_number }} \
+          --region ${{ env.REGION }} \
+          --platform managed \
+          --allow-unauthenticated \
+          --memory 2Gi \
+          --cpu 2
     - run: |
         SERVICE_URL=$(gcloud run services describe churn-prediction-api --region europe-west1 --format 'value(status.url)')
         echo "Testing API at $SERVICE_URL"
