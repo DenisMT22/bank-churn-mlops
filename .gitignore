@@ -18,13 +18,18 @@ htmlcov/
 .ipynb_checkpoints
 *.ipynb_checkpoints/
 
-# Data
+# Donnees
+# Seule la donnee source est suivie : tout le reste est regenere par le
+# pipeline d'entrainement (make train).
 data/raw/*.csv
-data/processed/*.pkl
+!data/raw/Bank_Churn_Prediction.csv
+data/processed/
 *.h5
 *.hdf5
 
-# Models
+# Artefacts de modelisation, tous regeneres par make train
+models/preprocessor.pkl
+src/models/preprocessor.pkl
 models/trained/*.pkl
 models/trained/*.joblib
 models/trained/*.h5
