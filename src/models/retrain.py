@@ -17,6 +17,7 @@ from datetime import datetime
 import joblib
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 from typing import Dict, Tuple
@@ -491,8 +492,6 @@ def main():
     """
     Fonction principale
     """
-    import os
-    
     # Configuration
     data_path = os.getenv('DATA_PATH', str(config.RAW_DATASET))
     models_dir = os.getenv('MODELS_DIR', str(config.MODELS_DIR))
