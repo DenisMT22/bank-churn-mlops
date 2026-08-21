@@ -1,0 +1,31 @@
+{
+    "model_name": "Logistic Regression",
+    "timestamp": "20251122_012149",
+    "metrics": {
+        "accuracy": 0.78,
+        "precision": 0.47480916030534354,
+        "recall": 0.7641277641277642,
+        "f1_score": 0.5856873822975519,
+        "roc_auc": 0.8539494810681251,
+        "cv_recall_mean": 0.7570552147239263,
+        "cv_recall_std": 0.028997060854224467
+    },
+    "model_filename": "best_model_20251122_012149.pkl",
+    "hyperparameters": {
+        "C": 1.0,
+        "class_weight": "balanced",
+        "dual": false,
+        "fit_intercept": true,
+        "intercept_scaling": 1,
+        "l1_ratio": null,
+        "max_iter": 1000,
+        "multi_class": "auto",
+        "n_jobs": null,
+        "penalty": "l2",
+        "random_state": 42,
+        "solver": "lbfgs",
+        "tol": 0.0001,
+        "verbose": 0,
+        "warm_start": false
+    }
+}

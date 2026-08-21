@@ -42,15 +42,32 @@ mlflow/
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Variables d'environnement
+# .env contient la configuration locale, .env.example sert de modele suivi.
 .env
 .env.local
 *.env
 
-# GCP
-*.json
+# Secrets et identifiants
+# Regles ciblees : l'ancienne regle *.json ignorait aussi les JSON
+# legitimes du projet, a commencer par models/model_metadata.json.
 gcp-key.json
-service-account.json
+*-key.json
+service-account*.json
+credentials*.json
+.streamlit/secrets.toml
+
+# JSON legitimes a conserver sous suivi malgre les regles ci-dessus
+# model_metadata.json est la source de verite des metriques du modele.
+!models/model_metadata.json
+
+# Resume de reentrainement : artefact regenere, pas une reference
+models/retraining_summary.json
+
+# Rapports de monitoring
+# Artefacts regeneres par Evidently a chaque execution (34 Mo).
+src/monitoring/reports/
+monitoring/reports/
 
 # Logs
 logs/
@@ -59,7 +76,10 @@ logs/
 # Docker
 docker-compose.override.yml
 
-# Temporary
+# Temporaire
 tmp/
 temp/
 *.tmp
+
+# Livrables de certification (documents personnels, hors depot)
+Livrables Bloc 4/
