@@ -598,9 +598,7 @@ bank-churn-mlops/
 │   ├── test_preprocessing.py     # Tests preprocessing
 │   └── test_model.py             # Tests modèle
 ├── 📁 notebooks/
-│   ├── 01_eda.ipynb              # Exploration des données
-│   ├── 02_modeling.ipynb         # Modélisation
-│   └── 03_evaluation.ipynb       # Évaluation
+│   └── 01_eda.ipynb              # Exploration des données
 ├── 📁 deployment/
 │   ├── Dockerfile                # Image Docker
 │   ├── docker-compose.yml        # Orchestration locale
