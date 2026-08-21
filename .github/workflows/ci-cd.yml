@@ -23,6 +23,34 @@ env:
 
 jobs:
   # ========================================
+  # JOB 0: SCAN DE SECRETS
+  # ========================================
+  secret-scan:
+    name: Scan de secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Historique complet : le scan porte sur tous les commits,
+          # pas seulement sur le dernier etat des fichiers.
+          fetch-depth: 0
+
+      - name: Installer gitleaks
+        run: |
+          VERSION=8.30.1
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scanner l'historique du depot
+        run: gitleaks git . --config .gitleaks.toml --redact --no-banner --verbose
+
+      - name: Scanner les fichiers de travail
+        run: gitleaks detect --no-git --source . --config .gitleaks.toml --redact --no-banner --verbose
+
+  # ========================================
   # JOB 1: TESTS UNITAIRES
   # ========================================
   test:

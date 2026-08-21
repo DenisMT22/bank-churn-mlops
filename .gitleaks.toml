@@ -1,0 +1,58 @@
+# Configuration gitleaks du projet bank-churn-mlops.
+#
+# Le moteur d'expressions regulieres de Go (RE2) ne supporte pas les
+# assertions avant ou arriere de type (?!...) ou (?<=...). Toute regle
+# qui en contient est rejetee au chargement de la configuration : on
+# n'utilise donc que des classes de caracteres.
+
+title = "Configuration gitleaks - bank-churn-mlops"
+
+# On part des regles par defaut de gitleaks et on ajoute les notres.
+[extend]
+useDefault = true
+
+# ----------------------------------------------------------------------
+# Regle propre au projet : cle de compte de service Google Cloud.
+# Le projet a manipule des fichiers gcp-key.json en local ; cette regle
+# garantit qu'aucun n'entre dans le depot, meme renomme.
+# ----------------------------------------------------------------------
+[[rules]]
+id = "gcp-service-account-key"
+description = "Cle privee de compte de service Google Cloud"
+regex = '''"private_key"[[:space:]]*:[[:space:]]*"-----BEGIN[[:space:]A-Z]*PRIVATE KEY-----'''
+tags = ["gcp", "cle-privee"]
+
+[[rules]]
+id = "gcp-service-account-block"
+description = "Bloc JSON de compte de service Google Cloud"
+regex = '''"type"[[:space:]]*:[[:space:]]*"service_account"'''
+tags = ["gcp", "identifiants"]
+
+  [rules.allowlist]
+  # Les fichiers d'exemple et la documentation peuvent citer la structure
+  # d'un compte de service sans contenir de secret.
+  paths = [
+    '''\.example$''',
+    '''\.md$''',
+  ]
+
+# ----------------------------------------------------------------------
+# Faux positifs connus, valables pour toutes les regles.
+# ----------------------------------------------------------------------
+[allowlist]
+description = "Modeles de configuration et references de secrets CI"
+
+paths = [
+  # Fichiers d'exemple : ne contiennent que des valeurs vides.
+  '''\.env\.example$''',
+  '''secrets\.toml\.example$''',
+  # La configuration gitleaks elle-meme contient des motifs de secrets.
+  '''(^|/)\.gitleaks\.toml$''',
+]
+
+regexes = [
+  # References a des secrets GitHub Actions : ${{ secrets.NOM }}
+  '''\$\{\{[[:space:]]*secrets\.[A-Za-z0-9_]+[[:space:]]*\}\}''',
+  # Substitutions shell et docker-compose : ${NOM}
+  '''\$\{[A-Za-z0-9_]+\}''',
+]

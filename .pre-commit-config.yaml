@@ -1,0 +1,33 @@
+# Hooks executes avant chaque commit.
+#
+# Installation, une seule fois apres avoir clone le depot :
+#   pip install pre-commit
+#   pre-commit install
+#
+# Pour verifier tout le depot sans attendre un commit :
+#   pre-commit run --all-files
+
+repos:
+  # Scan de secrets : refuse le commit si un identifiant est detecte.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        name: Recherche de secrets (gitleaks)
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Deuxieme filet sur les cles privees, independant de gitleaks.
+      - id: detect-private-key
+        name: Detection de cle privee
+      # Le depot a deja heberge 34 Mo de rapports HTML : on bloque en amont.
+      - id: check-added-large-files
+        name: Refus des fichiers volumineux
+        args: ['--maxkb=2048']
+      - id: check-merge-conflict
+        name: Marqueurs de conflit oublies
+      - id: check-yaml
+        name: Syntaxe des fichiers YAML
+      - id: check-toml
+        name: Syntaxe des fichiers TOML
