@@ -48,6 +48,11 @@ paths = [
   '''secrets\.toml\.example$''',
   # La configuration gitleaks elle-meme contient des motifs de secrets.
   '''(^|/)\.gitleaks\.toml$''',
+  # Environnement virtuel : dependances installees, jamais versionnees.
+  # Les sources minifiees de certains paquets declenchent la regle
+  # generic-api-key sans qu'aucun secret du projet soit en cause.
+  '''(^|/)venv/''',
+  '''(^|/)\.venv/''',
 ]
 
 regexes = [
