@@ -54,7 +54,7 @@ monitor: ## Generer les rapports de derive Evidently
 clean: ## Supprimer les artefacts regeneres et les caches
 	rm -rf .pytest_cache .coverage coverage.xml
 	find . -path ./$(VENV) -prune -o -name '__pycache__' -type d -exec rm -rf {} +
-	rm -f models/preprocessor.pkl
+	rm -f models/preprocessor.pkl models/last_run.json
 	rm -f models/trained/*.pkl
 	rm -f data/processed/data_with_features.csv
 	rm -rf src/monitoring/reports

@@ -35,6 +35,11 @@ MODELS_DIR = PROJECT_ROOT / "models"
 TRAINED_MODELS_DIR = MODELS_DIR / "trained"
 MODEL_LATEST = TRAINED_MODELS_DIR / "model_latest.pkl"
 MODEL_METADATA = MODELS_DIR / "model_metadata.json"
+# Comparaison des modeles evalues, ecrite par la comparaison complete.
+MODEL_COMPARISON = MODELS_DIR / "model_comparison.json"
+# Horodatage et nom du fichier produit par le dernier entrainement.
+# Volatil par nature, donc exclu du suivi git.
+LAST_RUN = MODELS_DIR / "last_run.json"
 PREPROCESSOR = MODELS_DIR / "preprocessor.pkl"
 
 # --- Sorties ---

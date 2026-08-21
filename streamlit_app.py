@@ -66,12 +66,19 @@ def load_model_metadata():
     """Charger les métadonnées du modèle"""
     try:
         metadata_path = Path("models/model_metadata.json")
-        if metadata_path.exists():
-            with open(metadata_path, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    return None
+        if not metadata_path.exists():
+            return None
+        with open(metadata_path, 'r') as f:
+            metadata = json.load(f)
+        # La date d'entraînement est stockée à part : elle change à chaque
+        # exécution et n'a donc pas sa place dans le fichier de référence.
+        last_run_path = Path("models/last_run.json")
+        if last_run_path.exists():
+            with open(last_run_path, 'r') as f:
+                metadata.setdefault('timestamp', json.load(f).get('timestamp'))
+        return metadata
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def call_api_predict(customer_data):

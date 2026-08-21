@@ -67,6 +67,8 @@ class ModelTrainer:
         self.results = {}
         self.best_model = None
         self.best_model_name = None
+        self.n_train = None
+        self.n_test = None
         
     def define_models(self, seulement=None):
         """
@@ -142,6 +144,7 @@ class ModelTrainer:
         use_smote : bool
             Utiliser SMOTE pour rééquilibrer les classes
         """
+        self.n_train, self.n_test = len(X_train), len(X_test)
         print("\n" + "=" * 60)
         print("ENTRAÎNEMENT DES MODÈLES")
         print("=" * 60)
@@ -382,18 +385,48 @@ class ModelTrainer:
         joblib.dump(self.best_model, f"{model_path}model_latest.pkl")
         print(f"✅ Modèle sauvegardé : {model_path}model_latest.pkl")
         
-        # Sauvegarder les métadonnées
+        # Métadonnées stables : ce fichier est suivi par git et sert de
+        # reference aux chiffres cites dans la documentation. Il ne doit
+        # donc contenir que ce qui ne bouge pas d'une execution a l'autre.
         metadata = {
             'model_name': self.best_model_name,
-            'timestamp': timestamp,
             'metrics': {k: float(v) for k, v in self.results[self.best_model_name]['metrics'].items()},
-            'model_filename': model_filename,
+            'training_samples': int(self.n_train) if self.n_train else None,
+            'test_samples': int(self.n_test) if self.n_test else None,
             'hyperparameters': self.best_model.get_params()
         }
         
         with open(f"{metadata_path}model_metadata.json", 'w') as f:
             json.dump(metadata, f, indent=4)
         print(f"✅ Métadonnées sauvegardées : {metadata_path}model_metadata.json")
+
+        # Trace de l'execution : horodatage et nom du fichier produit.
+        # Ces champs changent a chaque entrainement, ils sont donc isoles
+        # ici et exclus du suivi git.
+        derniere_execution = {
+            'timestamp': timestamp,
+            'model_filename': model_filename,
+            'model_name': self.best_model_name,
+        }
+        with open(f"{metadata_path}last_run.json", 'w') as f:
+            json.dump(derniere_execution, f, indent=4)
+        print(f"✅ Trace d'exécution sauvegardée : {metadata_path}last_run.json")
+
+        # Comparaison de tous les modeles evalues. Elle n'est ecrite que
+        # lorsque la comparaison complete a tourne : un entrainement rapide
+        # ne porte que sur un modele et ecraserait le tableau.
+        if len(self.results) > 1:
+            comparaison = {
+                nom: {k: float(v) for k, v in donnees['metrics'].items()}
+                for nom, donnees in self.results.items()
+            }
+            with open(f"{metadata_path}model_comparison.json", 'w') as f:
+                json.dump(
+                    {'best_model': self.best_model_name, 'models': comparaison},
+                    f,
+                    indent=4,
+                )
+            print(f"✅ Comparaison sauvegardée : {metadata_path}model_comparison.json")
         
         print(f"\n📋 Résumé du modèle sauvegardé :")
         print(f"  Nom : {self.best_model_name}")

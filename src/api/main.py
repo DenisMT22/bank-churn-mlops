@@ -66,11 +66,12 @@ app.add_middleware(
 model = None
 preprocessor = None
 model_metadata = None
+last_run = None
 start_time = time.time()
 
 
 def load_model_and_preprocessor():
-    global model, preprocessor, model_metadata
+    global model, preprocessor, model_metadata, last_run
 
     # Liste des chemins à tester (ordonnés par priorité)
     model_paths = [
@@ -86,6 +87,12 @@ def load_model_and_preprocessor():
     metadata_paths = [
         str(config.MODEL_METADATA),
         '/app/models/model_metadata.json',
+    ]
+    # L'horodatage du dernier entrainement vit dans un fichier separe,
+    # volontairement exclu du suivi git car il change a chaque execution.
+    last_run_paths = [
+        str(config.LAST_RUN),
+        '/app/models/last_run.json',
     ]
 
     # Trouver le premier chemin existant pour chacun
@@ -111,6 +118,14 @@ def load_model_and_preprocessor():
             with open(metadata_path, 'r') as f:
                 model_metadata = json.load(f)
             logger.info("✅ Métadonnées chargées")
+
+            # Date du dernier entrainement, si la trace est presente.
+            last_run_path = next((p for p in last_run_paths if Path(p).exists()), None)
+            if last_run_path:
+                with open(last_run_path, 'r') as f:
+                    last_run = json.load(f)
+                model_metadata.setdefault('timestamp', last_run.get('timestamp'))
+                logger.info("✅ Trace du dernier entraînement chargée")
         else:
             logger.warning("⚠️ Fichier de métadonnées introuvable")
             model_metadata = {

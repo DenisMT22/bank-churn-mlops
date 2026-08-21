@@ -66,6 +66,11 @@ credentials*.json
 # model_metadata.json est la source de verite des metriques du modele.
 !models/model_metadata.json
 
+# Champs volatils de l'entrainement : horodatage et nom du fichier
+# produit, differents a chaque execution. Isoles pour que le fichier de
+# metriques suivi reste stable.
+models/last_run.json
+
 # Resume de reentrainement : artefact regenere, pas une reference
 models/retraining_summary.json
 

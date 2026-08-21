@@ -1,6 +1,5 @@
 {
     "model_name": "Logistic Regression",
-    "timestamp": "20260822_001723",
     "metrics": {
         "accuracy": 0.78,
         "precision": 0.47480916030534354,
@@ -10,7 +9,8 @@
         "cv_recall_mean": 0.7570552147239263,
         "cv_recall_std": 0.028997060854224467
     },
-    "model_filename": "best_model_20260822_001723.pkl",
+    "training_samples": 8000,
+    "test_samples": 2000,
     "hyperparameters": {
         "C": 1.0,
         "class_weight": "balanced",

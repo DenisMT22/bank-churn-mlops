@@ -440,14 +440,20 @@ class AutoRetrainer:
             # 6. Déployer le nouveau modèle
             logger.info("\n🚀 Déploiement du nouveau modèle...")
             
+            # Memes conventions que l'entrainement initial : le fichier
+            # de reference ne contient que des champs stables.
             new_metadata = {
                 'model_name': model_name,
-                'timestamp': datetime.now().isoformat(),
                 'metrics': {k: float(v) for k, v in new_metrics.items()},
-                'training_samples': X_train.shape[0],
-                'test_samples': X_test.shape[0],
-                'retraining_reason': reason
+                'training_samples': int(X_train.shape[0]),
+                'test_samples': int(X_test.shape[0]),
             }
+            with open(self.models_dir / 'last_run.json', 'w') as f:
+                json.dump({
+                    'timestamp': datetime.now().isoformat(),
+                    'model_name': model_name,
+                    'retraining_reason': reason,
+                }, f, indent=4)
             
             deployment_success = self.deploy_model(
                 new_model,
