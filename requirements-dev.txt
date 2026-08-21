@@ -1,0 +1,17 @@
+# Dependances de developpement : tests, qualite de code, hooks.
+# Installe aussi les dependances d'execution.
+
+-r requirements.txt
+
+# --- Tests ---
+pytest==7.4.3
+pytest-cov==4.1.0
+# Requis par le client de test de FastAPI.
+httpx==0.25.2
+
+# --- Qualite de code ---
+ruff==0.1.9
+bandit==1.7.6
+
+# --- Hooks de pre-commit ---
+pre-commit==3.6.0
