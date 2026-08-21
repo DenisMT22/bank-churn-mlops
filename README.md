@@ -43,14 +43,15 @@ La présentation + La vidéo du pipeline MLOps au complet sont consultables via 
 
 ABC Multistate Bank fait face à un **taux de churn de 20%**, générant des pertes significatives. Ce projet développe une solution d'IA prédictive permettant d'identifier les clients à risque de départ **avant** qu'ils ne partent.
 
-### Objectifs
+### Objectif
 
-| Objectif | Cible | Résultat |
-|----------|-------|----------|
-| Recall (détection churners) | ≥ 75% | ✅ **81.2%** |
-| Precision | ≥ 60% | ✅ **78.9%** |
-| Latence API | < 200ms | ✅ **~100ms** |
-| Disponibilité | 99.5% | ✅ Cloud Run auto-scaling |
+Manquer un client sur le point de partir coûte plus cher qu'alerter à tort
+sur un client fidèle : une fausse alerte déclenche une offre de rétention,
+un départ non détecté fait perdre le client. Le modèle est donc optimisé
+sur le **recall**, quitte à accepter une précision basse.
+
+Tous les chiffres de ce README proviennent de `models/model_metadata.json`
+et de `models/model_comparison.json`, régénérés par `make train-complet`.
 
 ### Solution Déployée
 
@@ -191,15 +192,16 @@ streamlit run streamlit_app.py
 
 | Propriété | Valeur |
 |-----------|--------|
-| Observations | 10,000 |
-| Variables | 14 |
-| Target | `Churn` (0/1) |
-| Déséquilibre | 79.6% / 20.4% |
+| Observations | 10 000 |
+| Colonnes | 12 (identifiant, 10 variables, cible) |
+| Target | `churn` (0/1) |
+| Déséquilibre | 79.6% / 20.4% (7 963 / 2 037) |
 
 ### Variables
 
 | Variable | Type | Description |
 |----------|------|-------------|
+| customer_id | int | Identifiant client, écarté à l'entraînement |
 | credit_score | int | Score de crédit (300-900) |
 | country | cat | Pays (France/Germany/Spain) |
 | gender | cat | Genre (Male/Female) |
@@ -229,6 +231,9 @@ Le script `train.py` compare automatiquement 4 algorithmes et sélectionne le me
 
 > **🏆 Gagnant : Logistic Regression** avec un Recall de 76.41%
 
+> Ces vingt valeurs sont écrites par `make train-complet` dans
+> `models/model_comparison.json`. Aucune n'est saisie à la main.
+
 ### Pourquoi Logistic Regression ?
 
 Bien que d'autres modèles aient une meilleure Accuracy, **Logistic Regression** a été sélectionné car :
@@ -251,23 +256,45 @@ Réel 1            96         311      (FN / TP)
 - **96 churners manqués** (False Negatives) - à minimiser
 - **344 fausses alertes** (False Positives) - acceptables
 
-### Métriques Finales du Modèle en Production
+### Métriques du Modèle Retenu
 
-| Métrique | Score | Objectif | Statut |
-|----------|-------|----------|--------|
-| **Recall** | 76.41% | ≥ 75% | ✅ Atteint |
-| **Precision** | 47.48% | ≥ 60% | ⚠️ À améliorer |
-| **F1-Score** | 58.57% | ≥ 65% | ⚠️ À améliorer |
-| **ROC-AUC** | 85.39% | ≥ 85% | ✅ Atteint |
-| **Accuracy** | 78.00% | ≥ 75% | ✅ Atteint |
+Mesurées sur le jeu de test de 2 000 clients, jamais vu à l'entraînement.
 
-### Feature Importance (Top 5)
+| Métrique | Score |
+|----------|-------|
+| **Recall** | 76.41% |
+| **Precision** | 47.48% |
+| **F1-Score** | 58.57% |
+| **ROC-AUC** | 85.39% |
+| **Accuracy** | 78.00% |
+| Recall en validation croisée | 75.71% ± 2.90% |
 
-1. 🥇 **age** (15.6%)
-2. 🥈 **balance** (14.2%)
-3. 🥉 **active_member** (12.8%)
-4. **country_Germany** (11.5%)
-5. **products_number** (9.8%)
+Une précision de 47% signifie qu'environ une alerte sur deux est une fausse
+alerte. C'est le prix assumé du recall élevé, et le principal axe
+d'amélioration du modèle.
+
+> Source : `models/model_metadata.json`, régénéré par `make train`.
+
+### Variables les Plus Influentes
+
+Une régression logistique n'expose pas de `feature_importances_` : ce sont
+ses coefficients qui portent l'information. Appliqués à des variables
+standardisées, ils se comparent entre eux. Un coefficient positif pousse
+vers le départ, un coefficient négatif vers la fidélité.
+
+| Variable | Coefficient | Lecture |
+|----------|-------------|---------|
+| `HasMultipleProducts` | −3.58 | Détenir plusieurs produits retient fortement |
+| `products_number` | +2.58 | Mais le nombre brut de produits joue en sens inverse |
+| `balance` | +1.33 | Un solde élevé accompagne les départs |
+| `BalancePerProduct` | −1.32 | Rapporté au nombre de produits, l'effet s'inverse |
+| `age` | +1.29 | Les clients plus âgés partent davantage |
+| `active_member` | −0.64 | Un membre actif reste |
+
+Les deux premières lignes se lisent ensemble : le modèle distingue le fait
+d'avoir plusieurs produits du nombre exact de produits détenus.
+
+> Extraits de `models/trained/model_latest.pkl` après `make train`.
 
 ---
 
