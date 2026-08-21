@@ -67,12 +67,11 @@ et de `models/model_comparison.json`, régénérés par `make train-complet`.
 ## Fonctionnalités
 
 ### 🤖 Machine Learning
-- ✅ Exploration des données (EDA) complète
-- ✅ Feature engineering avancé (15+ features créées)
-- ✅ Gestion du déséquilibre des classes (SMOTE)
+- ✅ Exploration des données (EDA)
+- ✅ Feature engineering : 14 variables créées, 27 features vues par le modèle
+- ✅ Gestion du déséquilibre par SMOTE **et** `class_weight="balanced"`
 - ✅ Comparaison de 4 modèles (LR, RF, GB, XGBoost)
-- ✅ Optimisation des hyperparamètres
-- ✅ Interprétabilité (Feature Importance)
+- ✅ Interprétabilité par les coefficients du modèle
 
 ### 🔌 API & Déploiement
 - ✅ API REST avec FastAPI
@@ -84,16 +83,29 @@ et de `models/model_comparison.json`, régénérés par `make train-complet`.
 ### 🔄 MLOps
 - ✅ Pipeline CI/CD avec GitHub Actions
 - ✅ Tests automatisés (pytest)
-- ✅ Monitoring avec Evidently (drift detection)
-- ✅ Pipeline de retraining automatique
-- ✅ Versioning des modèles
-- ✅ Rollback automatique en cas d'échec
+- ✅ Scan de secrets (gitleaks, en pre-commit et en CI)
+- ✅ Monitoring avec Evidently (détection de dérive)
+- ✅ Pipeline de réentraînement déclenché sur seuil
+- ✅ Versioning des modèles par horodatage
 
 ### 🎨 Interface Utilisateur
 - ✅ Dashboard Streamlit interactif
 - ✅ Prédictions en temps réel
 - ✅ Visualisations des KPIs
 - ✅ Recommandations d'actions
+
+### Non implémenté
+
+Ces briques appartiennent à un pipeline MLOps complet mais ne sont pas
+présentes dans ce dépôt. Elles sont listées ici pour ce qu'elles sont :
+des pistes, pas des fonctionnalités.
+
+| Piste | État |
+|-------|------|
+| Rollback automatique en cas d'échec de déploiement | Non configuré : la CI signale l'échec sans revenir en arrière |
+| Déploiement canary et A/B testing | Non implémenté |
+| Mesure de latence et de disponibilité en production | Aucune instrumentation en place |
+| Optimisation des hyperparamètres | Les modèles utilisent des valeurs fixées à la main |
 
 ---
 
@@ -454,11 +466,10 @@ Les rapports HTML sont générés dans `monitoring/reports/`.
 
 ### Alertes Configurées
 
-| Métrique | Seuil | Action |
-|----------|-------|--------|
-| Recall | < 70% | 🔄 Retraining automatique |
-| Data Drift | > 30% colonnes | ⚠️ Alerte + Investigation |
-| Latence p95 | > 500ms | ⚠️ Alerte infrastructure |
+| Métrique | Seuil | Action | Défini dans |
+|----------|-------|--------|-------------|
+| Recall | < 70% | Réentraînement | `evidently_monitor.py` |
+| Colonnes en dérive | > 30% | Alerte dans le rapport | `evidently_monitor.py` |
 
 ---
 
@@ -478,11 +489,11 @@ jobs:
 
 ### Étapes du Pipeline
 
-1. **Test** : pytest avec coverage > 80%
-2. **Build** : Construction image Docker
-3. **Push** : Upload vers GCR
-4. **Deploy** : Déploiement Cloud Run
-5. **Verify** : Smoke tests post-déploiement
+1. **Scan de secrets** : gitleaks sur l'historique et les fichiers
+2. **Test** : pytest sur la suite de tests
+3. **Build** : construction de l'image Docker
+4. **Deploy** : déploiement Cloud Run
+5. **Verify** : smoke tests post-déploiement
 
 ### Retraining Automatique
 
@@ -505,11 +516,11 @@ Ce projet a permis de développer et démontrer les compétences suivantes :
 | Compétence | Description |
 |------------|-------------|
 | **Analyse Exploratoire (EDA)** | Exploration statistique, visualisations, détection d'outliers |
-| **Feature Engineering** | Création de 15+ features métier discriminantes |
+| **Feature Engineering** | Création de 14 variables métier, 27 features en entrée du modèle |
 | **Modélisation ML** | Entraînement, comparaison et sélection de modèles |
-| **Gestion du Déséquilibre** | Techniques SMOTE, class weighting, stratified sampling |
+| **Gestion du Déséquilibre** | SMOTE et pondération des classes, échantillonnage stratifié |
 | **Évaluation de Modèles** | Métriques adaptées (Recall prioritaire), cross-validation |
-| **Interprétabilité** | Feature importance, explicabilité des décisions |
+| **Interprétabilité** | Lecture des coefficients du modèle retenu |
 
 ### Développement & API
 
@@ -517,7 +528,7 @@ Ce projet a permis de développer et démontrer les compétences suivantes :
 |------------|-------------|
 | **Développement API REST** | Conception et implémentation avec FastAPI |
 | **Documentation API** | OpenAPI/Swagger, schémas Pydantic |
-| **Tests Unitaires** | pytest, couverture de code, TDD |
+| **Tests Unitaires** | pytest, tests d'API sur les endpoints |
 | **Validation de Données** | Schémas Pydantic, gestion des erreurs |
 | **Logging & Monitoring** | Logs structurés, métriques applicatives |
 
@@ -529,17 +540,17 @@ Ce projet a permis de développer et démontrer les compétences suivantes :
 | **CI/CD** | GitHub Actions, pipelines automatisés |
 | **Cloud Computing** | GCP Cloud Run, Cloud Storage, IAM |
 | **Infrastructure as Code** | Scripts de déploiement automatisés |
-| **Gestion des Secrets** | Variables d'environnement, Secret Manager |
+| **Gestion des Secrets** | Variables d'environnement, scan gitleaks, aucun identifiant versionné |
 
 ### MLOps
 
 | Compétence | Description |
 |------------|-------------|
 | **Pipeline ML Automatisé** | Preprocessing → Training → Deployment |
-| **Versioning de Modèles** | Traçabilité, rollback, comparaison |
+| **Versioning de Modèles** | Horodatage des modèles, comparaison des exécutions |
 | **Monitoring ML** | Détection de drift avec Evidently |
 | **Retraining Automatique** | Pipelines déclenchés sur conditions |
-| **A/B Testing** | Déploiement canary, validation progressive |
+| **Reproductibilité** | Pipeline régénérable depuis la donnée source, graine fixée |
 
 ### Gestion de Projet
 
