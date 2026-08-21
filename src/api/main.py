@@ -23,6 +23,14 @@ from pathlib import Path
 import logging
 import sys
 
+# Import du module de configuration des chemins. Le double essai permet
+# de charger l'API aussi bien depuis le depot que depuis l'image Docker.
+try:
+    from src.utils import config
+except ImportError:  # pragma: no cover - depend du mode d'execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.utils import config
+
 # Import des schémas
 from .schemas import (
     CustomerFeatures, PredictionResponse, BatchPredictionRequest,
@@ -66,16 +74,18 @@ def load_model_and_preprocessor():
 
     # Liste des chemins à tester (ordonnés par priorité)
     model_paths = [
-        '/Users/denismutombotshituka/bank-churn-mlops/models/trained/model_latest.pkl',
-        '/app/models/trained/model_latest.pkl'
+        str(config.MODEL_LATEST),
+        '/app/models/trained/model_latest.pkl',
     ]
     preprocessor_paths = [
-        '/Users/denismutombotshituka/bank-churn-mlops/src/models/preprocessor.pkl',
-        '/app/src/models/preprocessor.pkl'
+        str(config.PREPROCESSOR),
+        '/app/models/preprocessor.pkl',
+        # Ancien emplacement, conserve pour les images deja construites.
+        '/app/src/models/preprocessor.pkl',
     ]
     metadata_paths = [
-        '/Users/denismutombotshituka/bank-churn-mlops/models/model_metadata.json',
-        '/app/models/model_metadata.json'
+        str(config.MODEL_METADATA),
+        '/app/models/model_metadata.json',
     ]
 
     # Trouver le premier chemin existant pour chacun

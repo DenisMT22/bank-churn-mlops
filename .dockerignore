@@ -42,6 +42,11 @@ Thumbs.db
 logs/
 *.log
 
-# GCP
-*.json
+# Secrets et identifiants
+# Comme pour .gitignore, on evite la regle *.json qui excluait aussi les
+# metadonnees du modele, dont l'API a besoin dans l'image.
 gcp-key.json
+*-key.json
+service-account*.json
+credentials*.json
+.streamlit/secrets.toml

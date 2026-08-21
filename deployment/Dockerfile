@@ -7,7 +7,7 @@ LABEL description="API de prédiction de churn bancaire"
 LABEL version="1.0.0"
 
 # Variables d'environnement
-ENV PYTHONPATH=/app/src \
+ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -30,8 +30,9 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Copier le code source
-COPY src/api /app/api
-COPY src/models /app/src/models
+# On copie src/ en entier : le module src/utils/config.py resout les
+# chemins du projet et est importe par l'API comme par le pipeline.
+COPY src /app/src
 COPY models /app/models
 
 # Créer utilisateur non-root pour sécurité
@@ -48,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8080/health')"
 
 # Commande de démarrage
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]

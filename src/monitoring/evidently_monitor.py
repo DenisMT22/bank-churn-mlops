@@ -14,8 +14,17 @@ import numpy as np
 from datetime import datetime
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, Tuple, Optional
+
+# Import du module de configuration des chemins. Le double essai permet
+# d'executer ce fichier aussi bien comme script que comme module importe.
+try:
+    from src.utils import config
+except ImportError:  # pragma: no cover - depend du mode d'execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.utils import config
 
 from evidently import ColumnMapping
 from evidently.report import Report
@@ -58,7 +67,7 @@ class MLMonitor:
         preprocessor,
         target_col: str = 'churn',
         prediction_col: str = 'prediction',
-        output_dir: str = '../monitoring/reports'
+        output_dir: str = None
     ):
         """
         Initialisation du moniteur
@@ -83,7 +92,10 @@ class MLMonitor:
         self.preprocessor = preprocessor
         self.target_col = target_col
         self.prediction_col = prediction_col
-        self.output_dir = Path(output_dir)
+        # Chemin resolu depuis la racine du projet : un chemin relatif
+        # dependrait du repertoire courant et creerait un dossier
+        # parasite selon l'endroit d'ou le script est lance.
+        self.output_dir = Path(output_dir) if output_dir else config.MONITORING_REPORTS_DIR
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Configuration des colonnes pour Evidently
@@ -467,12 +479,7 @@ def main():
     import sys
     import os
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.abspath(os.path.join(current_dir, '/Users/denismutombotshituka/bank-churn-mlops/src/models'))
-    if models_dir not in sys.path:
-       sys.path.insert(0, models_dir)
-
-    from preprocessing import prepare_data_for_training
+    from src.models.preprocessing import prepare_data_for_training
     
     print("\n" + "=" * 60)
     print("TEST DU MONITORING EVIDENTLY")
@@ -480,17 +487,17 @@ def main():
     
     # 1. Charger les données
     X_train, X_test, y_train, y_test, preprocessor = prepare_data_for_training(
-        data_path='/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_prediction.csv',
+        data_path=str(config.RAW_DATASET),
         target_col='churn',
         test_size=0.2,
         random_state=42
     )
     
     # 2. Charger le modèle
-    model = joblib.load('/Users/denismutombotshituka/bank-churn-mlops/models/trained/model_latest.pkl')
+    model = joblib.load(config.MODEL_LATEST)
     
     # 3. Préparer les dataframes (avec features originales + target)
-    df = pd.read_csv('/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_prediction.csv')
+    df = pd.read_csv(config.RAW_DATASET)
     from sklearn.model_selection import train_test_split
     
     train_df, test_df = train_test_split(

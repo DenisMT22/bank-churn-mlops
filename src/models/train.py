@@ -8,6 +8,11 @@ Ce script entraîne plusieurs modèles, les compare et sauvegarde le meilleur.
 
 import pandas as pd
 import numpy as np
+import matplotlib
+
+# Backend sans fenetre : le script doit tourner dans un terminal sans
+# serveur graphique, notamment en integration continue.
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -26,10 +31,19 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold
 from imblearn.over_sampling import SMOTE
 import xgboost as xgb
 
-# Import du preprocessor
 import sys
-sys.path.append('..')
-from models.preprocessing import prepare_data_for_training
+from pathlib import Path
+
+# Import du module de configuration des chemins. Le double essai permet
+# d'executer ce fichier aussi bien comme script que comme module importe,
+# en local comme dans l'image Docker.
+try:
+    from src.utils import config
+except ImportError:  # pragma: no cover - depend du mode d'execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.utils import config
+
+from src.models.preprocessing import prepare_data_for_training, DataPreprocessor
 
 warnings.filterwarnings('ignore')
 
@@ -54,7 +68,7 @@ class ModelTrainer:
         self.best_model = None
         self.best_model_name = None
         
-    def define_models(self):
+    def define_models(self, seulement=None):
         """
         Définir les modèles à tester
         """
@@ -100,6 +114,15 @@ class ModelTrainer:
             )
         }
         
+        # Restriction eventuelle a un sous-ensemble de modeles : utile pour
+        # regenerer rapidement les artefacts sans reentrainer toute la
+        # comparaison, qui prend plus d'une minute.
+        if seulement:
+            inconnus = set(seulement) - set(self.models)
+            if inconnus:
+                raise ValueError(f"Modeles inconnus : {sorted(inconnus)}")
+            self.models = {k: v for k, v in self.models.items() if k in seulement}
+
         print(f"✅ {len(self.models)} modèles définis :")
         for name in self.models.keys():
             print(f"  • {name}")
@@ -228,13 +251,18 @@ class ModelTrainer:
         
         return self
     
-    def plot_results(self, y_test, save_path='/Users/denismutombotshituka/bank-churn-mlops/docs/'):
+    def plot_results(self, y_test, save_path=None):
         """
         Visualiser les résultats
         """
         print("\n" + "=" * 60)
         print("GÉNÉRATION DES VISUALISATIONS")
         print("=" * 60)
+
+        # Par defaut, les figures vont dans docs/ a la racine du projet.
+        if save_path is None:
+            save_path = f"{config.DOCS_DIR}/"
+        Path(save_path).mkdir(parents=True, exist_ok=True)
         
         # 1. Comparaison des métriques
         fig, ax = plt.subplots(figsize=(12, 6))
@@ -258,7 +286,7 @@ class ModelTrainer:
         plt.tight_layout()
         plt.savefig(f"{save_path}metrics_comparison.png", dpi=300, bbox_inches='tight')
         print(f"✅ Graphique sauvegardé : {save_path}metrics_comparison.png")
-        plt.show()
+        plt.close()
         
         # 2. Matrices de confusion
         fig, axes = plt.subplots(2, 2, figsize=(14, 12))
@@ -277,7 +305,7 @@ class ModelTrainer:
         plt.tight_layout()
         plt.savefig(f"{save_path}confusion_matrices.png", dpi=300, bbox_inches='tight')
         print(f"✅ Graphique sauvegardé : {save_path}confusion_matrices.png")
-        plt.show()
+        plt.close()
         
         # 3. Courbes ROC
         fig, ax = plt.subplots(figsize=(10, 8))
@@ -299,13 +327,12 @@ class ModelTrainer:
         plt.tight_layout()
         plt.savefig(f"{save_path}roc_curves.png", dpi=300, bbox_inches='tight')
         print(f"✅ Graphique sauvegardé : {save_path}roc_curves.png")
-        plt.show()
+        plt.close()
         
         # 4. Feature Importance (meilleur modèle)
         if hasattr(self.best_model, 'feature_importances_'):
             # Charger les noms de features
-            from models.preprocessing import DataPreprocessor
-            preprocessor = DataPreprocessor.load('/Users/denismutombotshituka/bank-churn-mlops/src/models/preprocessor.pkl')
+            preprocessor = DataPreprocessor.load(str(config.PREPROCESSOR))
             feature_names = preprocessor.get_feature_names()
             
             importances = self.best_model.feature_importances_
@@ -322,19 +349,26 @@ class ModelTrainer:
             plt.tight_layout()
             plt.savefig(f"{save_path}feature_importance.png", dpi=300, bbox_inches='tight')
             print(f"✅ Graphique sauvegardé : {save_path}feature_importance.png")
-            plt.show()
+            plt.close()
         
         print(f"\n✅ Toutes les visualisations ont été sauvegardées dans {save_path}")
         
         return self
     
-    def save_best_model(self, model_path='/Users/denismutombotshituka/bank-churn-mlops/models/trained/', metadata_path='/Users/denismutombotshituka/bank-churn-mlops/models/'):
+    def save_best_model(self, model_path=None, metadata_path=None):
         """
         Sauvegarder le meilleur modèle et ses métadonnées
         """
         print("\n" + "=" * 60)
         print("SAUVEGARDE DU MEILLEUR MODÈLE")
         print("=" * 60)
+
+        if model_path is None:
+            model_path = f"{config.TRAINED_MODELS_DIR}/"
+        if metadata_path is None:
+            metadata_path = f"{config.MODELS_DIR}/"
+        Path(model_path).mkdir(parents=True, exist_ok=True)
+        Path(metadata_path).mkdir(parents=True, exist_ok=True)
         
         # Créer nom de fichier avec timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -371,9 +405,17 @@ class ModelTrainer:
         return self
 
 
-def main():
+def main(rapide=False, figures=True):
     """
     Fonction principale d'entraînement
+
+    Parameters:
+    -----------
+    rapide : bool
+        N'entrainer que la regression logistique, qui est le modele
+        retenu. Utile pour regenerer les artefacts en quelques secondes.
+    figures : bool
+        Regenerer les figures de docs/.
     """
     print("\n" + "=" * 80)
     print(" " * 20 + "🚀 ENTRAÎNEMENT DU MODÈLE DE CHURN")
@@ -381,22 +423,23 @@ def main():
     
     # 1. Préparer les données
     X_train, X_test, y_train, y_test, preprocessor = prepare_data_for_training(
-        data_path='/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_Prediction.csv',
-        target_col='churn',
-        test_size=0.2,
-        random_state=42
+        data_path=str(config.RAW_DATASET),
+        target_col=config.TARGET_COLUMN,
+        test_size=config.TEST_SIZE,
+        random_state=config.RANDOM_STATE
     )
     
     # 2. Entraîner les modèles
-    trainer = ModelTrainer(random_state=42)
-    trainer.define_models()
+    trainer = ModelTrainer(random_state=config.RANDOM_STATE)
+    trainer.define_models(seulement=['Logistic Regression'] if rapide else None)
     trainer.train_and_evaluate(X_train, X_test, y_train, y_test, use_smote=True)
     
     # 3. Sélectionner le meilleur
     trainer.select_best_model(metric='recall')
     
     # 4. Visualiser
-    trainer.plot_results(y_test)
+    if figures:
+        trainer.plot_results(y_test)
     
     # 5. Sauvegarder
     trainer.save_best_model()
@@ -409,4 +452,22 @@ def main():
 
 
 if __name__ == "__main__":
-    trainer = main()
+    import argparse
+
+    parseur = argparse.ArgumentParser(
+        description="Entraine le modele de prediction de churn a partir du "
+                    "jeu de donnees source et regenere tous les artefacts."
+    )
+    parseur.add_argument(
+        "--rapide",
+        action="store_true",
+        help="N'entrainer que la regression logistique, le modele retenu.",
+    )
+    parseur.add_argument(
+        "--sans-figures",
+        action="store_true",
+        help="Ne pas regenerer les figures de docs/.",
+    )
+    arguments = parseur.parse_args()
+
+    trainer = main(rapide=arguments.rapide, figures=not arguments.sans_figures)

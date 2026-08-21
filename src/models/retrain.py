@@ -28,8 +28,16 @@ from sklearn.metrics import (
 
 # Import des modules custom
 sys.path.append('..')
-from models.preprocessing import DataPreprocessor, prepare_data_for_training
-from models.train import ModelTrainer
+# Import du module de configuration des chemins. Le double essai permet
+# d'executer ce fichier aussi bien comme script que comme module importe.
+try:
+    from src.utils import config
+except ImportError:  # pragma: no cover - depend du mode d'execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.utils import config
+
+from src.models.preprocessing import DataPreprocessor, prepare_data_for_training
+from src.models.train import ModelTrainer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -486,8 +494,8 @@ def main():
     import os
     
     # Configuration
-    data_path = os.getenv('DATA_PATH', '/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_Prediction.csv')
-    models_dir = os.getenv('MODELS_DIR', '../../models')
+    data_path = os.getenv('DATA_PATH', str(config.RAW_DATASET))
+    models_dir = os.getenv('MODELS_DIR', str(config.MODELS_DIR))
     
     # Créer et exécuter le retrainer
     retrainer = AutoRetrainer(
@@ -517,6 +525,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import os
-    os.environ['DATA_PATH'] = '/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_Prediction.csv'
     main()

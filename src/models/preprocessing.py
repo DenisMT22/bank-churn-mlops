@@ -15,6 +15,17 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import joblib
 import warnings
+from pathlib import Path
+
+# Import du module de configuration des chemins. Le double essai permet
+# d'executer ce fichier aussi bien comme script que comme module importe,
+# en local comme dans l'image Docker.
+try:
+    from src.utils import config
+except ImportError:  # pragma: no cover - depend du mode d'execution
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.utils import config
 
 warnings.filterwarnings('ignore')
 
@@ -409,8 +420,18 @@ def prepare_data_for_training(data_path, target_col='churn', test_size=0.2, rand
     print(f"  Features créées : {len(preprocessor.get_feature_names())}")
     
     # 5. Sauvegarde du preprocessor
-    preprocessor.save('../models/preprocessor.pkl')
-    
+    config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    preprocessor.save(str(config.PREPROCESSOR))
+
+    # 6. Sauvegarde du jeu enrichi
+    # Ce fichier derive sert a l'exploration et au tableau de bord. Il est
+    # regenere ici pour que le depot n'ait a suivre que la donnee source.
+    donnees_enrichies = FeatureEngineering().fit_transform(X)
+    donnees_enrichies[target_col] = y.values
+    config.PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    donnees_enrichies.to_csv(config.PROCESSED_DATASET, index=False)
+    print(f"✅ Jeu enrichi sauvegardé : {config.PROCESSED_DATASET}")
+
     return X_train_processed, X_test_processed, y_train, y_test, preprocessor
 
 
@@ -424,7 +445,7 @@ if __name__ == "__main__":
     
     # Charger et préparer les données
     X_train, X_test, y_train, y_test, preprocessor = prepare_data_for_training(
-        data_path='/Users/denismutombotshituka/bank-churn-mlops/data/raw/Bank_Churn_prediction.csv',
+        data_path=str(config.RAW_DATASET),
         target_col='churn',
         test_size=0.2,
         random_state=42
