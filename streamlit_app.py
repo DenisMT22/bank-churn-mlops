@@ -11,13 +11,20 @@ Interface pour visualiser :
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
+import os
 import requests
 import json
 from pathlib import Path
+
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+)
 
 # Configuration de la page
 st.set_page_config(
@@ -58,8 +65,93 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Configuration
-API_URL = st.secrets.get("API_URL", "http://localhost:8080")
+# ==============================================================================
+# MOTEUR DE PRÉDICTION
+#
+# Le tableau de bord fonctionne de deux manières.
+#
+# Par défaut il charge le modèle dans son propre processus : aucun serveur
+# n'est nécessaire, ce qui permet de l'héberger seul sur Streamlit Community
+# Cloud. Si les artefacts sont absents, il les régénère depuis la donnée
+# source versionnée, ce qui prend quelques secondes au premier démarrage.
+#
+# Si la variable API_URL est définie, dans les secrets Streamlit ou dans
+# l'environnement, il interroge cette API distante à la place.
+# ==============================================================================
+
+try:
+    API_URL = st.secrets.get("API_URL") or os.environ.get("API_URL")
+except Exception:
+    # Aucun fichier de secrets : cas normal sur une installation neuve.
+    API_URL = os.environ.get("API_URL")
+
+MODE_LOCAL = not API_URL
+
+SEUIL_RISQUE_MOYEN = 0.3
+SEUIL_RISQUE_ELEVE = 0.6
+
+
+@st.cache_resource(show_spinner="Chargement du modèle...")
+def charger_moteur_local():
+    """
+    Charger le modèle et le preprocessor en mémoire.
+
+    Les artefacts ne sont pas versionnés : s'ils manquent, ils sont
+    régénérés à partir de data/raw, qui l'est.
+    """
+    import joblib
+
+    from src.utils import config
+
+    if not (config.MODEL_LATEST.exists() and config.PREPROCESSOR.exists()):
+        from src.models.train import main as entrainer
+
+        entrainer(rapide=True, figures=False)
+
+    return joblib.load(config.MODEL_LATEST), joblib.load(config.PREPROCESSOR)
+
+
+def niveau_de_risque(probabilite):
+    """Traduire une probabilité en niveau de risque, comme le fait l'API."""
+    if probabilite < SEUIL_RISQUE_MOYEN:
+        return "Low"
+    if probabilite < SEUIL_RISQUE_ELEVE:
+        return "Medium"
+    return "High"
+
+
+def predire_en_local(donnees_client):
+    """Prédire dans le processus courant, sans passer par une API."""
+    import pandas as pd
+
+    modele, preprocessor = charger_moteur_local()
+
+    entree = pd.DataFrame([{
+        "credit_score": donnees_client["credit_score"],
+        "country": donnees_client["country"],
+        "gender": donnees_client["gender"],
+        "age": donnees_client["age"],
+        "tenure": donnees_client["tenure"],
+        "balance": donnees_client["balance"],
+        "products_number": donnees_client["products_number"],
+        "credit_card": donnees_client["credit_card"],
+        "active_member": donnees_client["active_member"],
+        "estimated_salary": donnees_client["estimated_salary"],
+        "customer_id": donnees_client.get("customer_id") or 0,
+    }])
+
+    transforme = preprocessor.transform(entree)
+    prediction = int(modele.predict(transforme)[0])
+    probabilite = float(modele.predict_proba(transforme)[0, 1])
+
+    return {
+        "customer_id": donnees_client.get("customer_id"),
+        "churn_prediction": prediction,
+        "churn_probability": round(probabilite, 4),
+        "risk_level": niveau_de_risque(probabilite),
+        "confidence": round(probabilite if prediction == 1 else 1 - probabilite, 4),
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 def load_model_metadata():
@@ -81,8 +173,50 @@ def load_model_metadata():
         return None
 
 
+@st.cache_data(show_spinner="Évaluation sur le jeu de test...")
+def evaluer_sur_jeu_de_test():
+    """
+    Rejouer le découpage de l'entraînement et évaluer le modèle chargé.
+
+    Tout est recalculé en direct : aucune métrique n'est écrite en dur.
+    """
+    from sklearn.model_selection import train_test_split
+
+    from src.utils import config
+
+    if not config.RAW_DATASET.exists():
+        return None
+
+    try:
+        modele, preprocessor = charger_moteur_local()
+    except Exception:
+        return None
+
+    donnees = pd.read_csv(config.RAW_DATASET)
+    X = donnees.drop(columns=[config.TARGET_COLUMN])
+    y = donnees[config.TARGET_COLUMN]
+    _, X_test, _, y_test = train_test_split(
+        X, y,
+        test_size=config.TEST_SIZE,
+        random_state=config.RANDOM_STATE,
+        stratify=y,
+    )
+
+    transforme = preprocessor.transform(X_test)
+    return (
+        y_test.to_numpy(),
+        modele.predict(transforme),
+        modele.predict_proba(transforme)[:, 1],
+    )
+
+
 def call_api_predict(customer_data):
-    """Appeler l'API pour une prédiction"""
+    """Prédire, en local ou via l'API distante selon la configuration."""
+    if MODE_LOCAL:
+        try:
+            return predire_en_local(customer_data)
+        except Exception as erreur:
+            return {"error": str(erreur)}
     try:
         response = requests.post(
             f"{API_URL}/predict",
@@ -91,14 +225,19 @@ def call_api_predict(customer_data):
         )
         if response.status_code == 200:
             return response.json()
-        else:
-            return {"error": f"API Error: {response.status_code}"}
-    except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Erreur API : {response.status_code}"}
+    except Exception as erreur:
+        return {"error": str(erreur)}
 
 
 def get_api_health():
-    """Vérifier la santé de l'API"""
+    """État du moteur de prédiction."""
+    if MODE_LOCAL:
+        try:
+            charger_moteur_local()
+            return {"status": "healthy", "mode": "local", "model_loaded": True}
+        except Exception:
+            return None
     try:
         response = requests.get(f"{API_URL}/health", timeout=5)
         if response.status_code == 200:
@@ -109,7 +248,16 @@ def get_api_health():
 
 
 def get_model_metrics():
-    """Récupérer les métriques du modèle"""
+    """Métriques du modèle, lues sur disque en local."""
+    if MODE_LOCAL:
+        metadata = load_model_metadata()
+        if not metadata:
+            return None
+        return {
+            "model_name": metadata.get("model_name"),
+            "metrics": metadata.get("metrics", {}),
+            "training_date": metadata.get("timestamp", "inconnue"),
+        }
     try:
         response = requests.get(f"{API_URL}/metrics", timeout=5)
         if response.status_code == 200:
@@ -122,8 +270,7 @@ def get_model_metrics():
 # ==============================================================================
 # SIDEBAR - NAVIGATION
 # ==============================================================================
-st.sidebar.image("https://via.placeholder.com/300x100/1f77b4/ffffff?text=ABC+Bank", width='stretch')
-st.sidebar.title("🏦 Navigation")
+st.sidebar.title("Prédiction de churn")
 
 page = st.sidebar.radio(
     "Choisir une page",
@@ -132,20 +279,27 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
-# Statut de l'API
-st.sidebar.subheader("🔌 Statut API")
+# Statut du moteur de prédiction
+st.sidebar.subheader("Moteur de prédiction")
 health = get_api_health()
-if health:
-    if health.get("status") == "healthy":
-        st.sidebar.success("✅ API En ligne")
-        st.sidebar.metric("Uptime", f"{health.get('uptime_seconds', 0):.0f}s")
+if health and health.get("status") == "healthy":
+    if MODE_LOCAL:
+        st.sidebar.success("Modèle chargé en local")
+        st.sidebar.caption("Aucun serveur requis : le modèle tourne dans cette application.")
     else:
-        st.sidebar.warning("⚠️ API Dégradée")
+        st.sidebar.success("API distante joignable")
+        st.sidebar.caption(f"Source : {API_URL}")
+        if health.get("uptime_seconds") is not None:
+            st.sidebar.metric("Disponible depuis", f"{health.get('uptime_seconds', 0):.0f} s")
+elif MODE_LOCAL:
+    st.sidebar.error("Modèle indisponible")
+    st.sidebar.caption("Lancer `make train` pour régénérer les artefacts.")
 else:
-    st.sidebar.error("❌ API Hors ligne")
+    st.sidebar.error("API injoignable")
+    st.sidebar.caption(f"Aucune réponse de {API_URL}")
 
 st.sidebar.markdown("---")
-st.sidebar.info("**Version:** 1.0.0\n**Environnement:** Production")
+st.sidebar.caption("Démonstration à partir du jeu de données Kaggle Bank Customer Churn.")
 
 
 # ==============================================================================
@@ -281,7 +435,7 @@ if page == "🏠 Dashboard":
             height=400
         )
         
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
 
 # ==============================================================================
@@ -314,7 +468,7 @@ elif page == "🔮 Prédiction":
     
     st.markdown("---")
     
-    if st.button("🔮 Prédire le Churn", type="primary", width='stretch'):
+    if st.button("🔮 Prédire le Churn", type="primary", use_container_width=True):
         # Préparer les données
         customer_data = {
             "credit_score": credit_score,
@@ -384,7 +538,7 @@ elif page == "🔮 Prédiction":
             ))
             
             fig.update_layout(height=300)
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
             
             # Recommandations
             st.markdown("---")
@@ -418,75 +572,97 @@ elif page == "🔮 Prédiction":
 # PAGE 3: MONITORING
 # ==============================================================================
 elif page == "📊 Monitoring":
-    st.markdown('<div class="main-header">📊 Monitoring & Alertes</div>', unsafe_allow_html=True)
-    
-    # Simuler des données de monitoring
-    dates = pd.date_range(start=datetime.now() - timedelta(days=30), end=datetime.now(), freq='D')
-    monitoring_data = pd.DataFrame({
-        'date': dates,
-        'recall': np.random.uniform(0.72, 0.82, len(dates)),
-        'precision': np.random.uniform(0.58, 0.68, len(dates)),
-        'latency_ms': np.random.uniform(80, 150, len(dates)),
-        'requests': np.random.randint(500, 2000, len(dates))
-    })
-    
-    # Graphique évolution recall
-    st.subheader("📈 Évolution du Recall (30 derniers jours)")
-    
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        x=monitoring_data['date'],
-        y=monitoring_data['recall'],
-        mode='lines+markers',
-        name='Recall',
-        line=dict(color='blue', width=2)
-    ))
-    
-    fig.add_hline(y=0.75, line_dash="dash", line_color="green", annotation_text="Cible: 75%")
-    fig.add_hline(y=0.70, line_dash="dash", line_color="red", annotation_text="Alerte: 70%")
-    
-    fig.update_layout(
-        yaxis_title="Recall",
-        yaxis_range=[0.65, 0.85],
-        height=400
+    st.markdown('<div class="main-header">Monitoring du modèle</div>', unsafe_allow_html=True)
+
+    st.info(
+        "Cette application n'est reliée à aucun trafic de production : il n'existe "
+        "donc ni historique de requêtes, ni mesure de latence réelle. Les éléments "
+        "ci-dessous sont calculés en direct sur le jeu de test, à partir du modèle "
+        "réellement chargé."
     )
-    
-    st.plotly_chart(fig, width='stretch')
-    
-    # Métriques de latence
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("⚡ Latence API")
-        avg_latency = monitoring_data['latency_ms'].mean()
-        st.metric("Latence Moyenne", f"{avg_latency:.0f}ms", delta=f"{avg_latency - 100:.0f}ms")
-        
-        fig = px.line(monitoring_data, x='date', y='latency_ms', title="Latence API (30j)")
-        fig.add_hline(y=200, line_dash="dash", line_color="red", annotation_text="SLA: 200ms")
-        st.plotly_chart(fig, width='stretch')
-    
-    with col2:
-        st.subheader("📊 Volume de Requêtes")
-        total_requests = monitoring_data['requests'].sum()
-        st.metric("Total Requêtes (30j)", f"{total_requests:,}")
-        
-        fig = px.bar(monitoring_data, x='date', y='requests', title="Requêtes journalières")
-        st.plotly_chart(fig, width='stretch')
-    
-    # Alertes
-    st.markdown("---")
-    st.subheader("🚨 Alertes Actives")
-    
-    # Simuler quelques alertes
-    if monitoring_data['recall'].iloc[-1] < 0.75:
-        st.warning("⚠️ Recall sous la cible : 72% < 75%")
-    
-    if monitoring_data['latency_ms'].iloc[-1] > 180:
-        st.warning("⚠️ Latence élevée : 185ms > 180ms")
-    
-    if monitoring_data['recall'].iloc[-1] >= 0.75 and monitoring_data['latency_ms'].iloc[-1] < 150:
-        st.success("✅ Tous les indicateurs sont au vert")
+
+    resultats = evaluer_sur_jeu_de_test()
+
+    if resultats is None:
+        st.warning("Jeu de données ou modèle indisponible. Lancer `make train`.")
+    else:
+        y_vrai, y_predit, probabilites = resultats
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Recall", f"{recall_score(y_vrai, y_predit):.1%}")
+        col2.metric("Précision", f"{precision_score(y_vrai, y_predit):.1%}")
+        col3.metric("Exactitude", f"{accuracy_score(y_vrai, y_predit):.1%}")
+        col4.metric("Clients évalués", f"{len(y_vrai):,}".replace(",", " "))
+
+        st.markdown("---")
+        st.subheader("Distribution des probabilités de départ prédites")
+
+        distribution = pd.DataFrame({
+            "probabilite": probabilites,
+            "situation reelle": ["Client parti" if v == 1 else "Client resté" for v in y_vrai],
+        })
+        figure = px.histogram(
+            distribution,
+            x="probabilite",
+            color="situation reelle",
+            nbins=40,
+            barmode="overlay",
+            opacity=0.65,
+            labels={"probabilite": "Probabilité de départ prédite"},
+        )
+        figure.add_vline(
+            x=0.5, line_dash="dash",
+            annotation_text="Seuil de décision",
+        )
+        figure.update_layout(height=380)
+        st.plotly_chart(figure, use_container_width=True)
+
+        st.caption(
+            "Les deux populations se recouvrent largement : c'est ce recouvrement "
+            "qui explique une précision de l'ordre de 47 %."
+        )
+
+        st.markdown("---")
+        col_gauche, col_droite = st.columns(2)
+
+        with col_gauche:
+            st.subheader("Matrice de confusion")
+            matrice = confusion_matrix(y_vrai, y_predit)
+            figure = px.imshow(
+                matrice,
+                text_auto=True,
+                color_continuous_scale="Blues",
+                labels={"x": "Prédiction", "y": "Réalité"},
+                x=["Reste", "Part"],
+                y=["Reste", "Part"],
+            )
+            figure.update_layout(height=340, coloraxis_showscale=False)
+            st.plotly_chart(figure, use_container_width=True)
+            st.caption(
+                f"{matrice[1][1]} départs détectés, {matrice[1][0]} manqués, "
+                f"{matrice[0][1]} fausses alertes."
+            )
+
+        with col_droite:
+            st.subheader("Seuils de déclenchement")
+            st.dataframe(
+                pd.DataFrame([
+                    {"Indicateur": "Recall", "Seuil": "< 70 %", "Action": "Réentraînement"},
+                    {"Indicateur": "Colonnes en dérive", "Seuil": "> 30 %", "Action": "Alerte"},
+                ]),
+                hide_index=True,
+                use_container_width=True,
+            )
+            st.caption(
+                "Seuils définis dans `src/monitoring/evidently_monitor.py`. "
+                "Les rapports de dérive complets se génèrent avec `make monitor`."
+            )
+
+            recall_courant = recall_score(y_vrai, y_predit)
+            if recall_courant < 0.70:
+                st.error(f"Recall à {recall_courant:.1%}, sous le seuil de 70 %.")
+            else:
+                st.success(f"Recall à {recall_courant:.1%}, au-dessus du seuil de 70 %.")
 
 
 # ==============================================================================
@@ -543,7 +719,7 @@ elif page == "⚙️ Modèle":
             'Statut': ['Archivée', 'Archivée', 'Production']
         })
         
-        st.dataframe(versions_data, width='stretch')
+        st.dataframe(versions_data, use_container_width=True)
         
         # Bouton de réentraînement
         st.markdown("---")
