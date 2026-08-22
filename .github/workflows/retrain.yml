@@ -1,23 +1,29 @@
 name: Automated Model Retraining
 
+# Ce workflow est en sommeil : il ne se declenche que manuellement.
+#
+# Il dependait auparavant d'une planification hebdomadaire et d'une
+# poussee sur data/raw. Ces deux declencheurs le lancaient
+# automatiquement alors que chacune de ses etapes a besoin d'un compte
+# Google Cloud, dont l'abonnement n'est plus actif : le pipeline echouait
+# chaque lundi sans que rien ne soit casse dans le projet.
+#
+# Le reentrainement peut se lancer en local a tout moment, sans cloud :
+#   python -m src.models.retrain
+#
+# Pour reactiver ce workflow, definir les secrets GCP_SA_KEY et
+# GCP_PROJECT_ID dans les reglages du depot.
 on:
   workflow_dispatch:
     inputs:
       data_source:
         description: 'Source des données (gcs/local)'
         required: true
-        default: 'gcs'
+        default: 'local'
         type: choice
         options:
-          - gcs
           - local
-  schedule:
-    - cron: '0 2 * * 1'
-  push:
-    branches:
-      - main
-    paths:
-      - 'data/raw/*.csv'
+          - gcs
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -29,6 +35,7 @@ env:
 jobs:
   check-retraining-need:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
     outputs:
       needs_retraining: ${{ steps.check.outputs.needs_retraining }}
     steps:
@@ -70,7 +77,9 @@ jobs:
 
   retrain-model:
     needs: check-retraining-need
-    if: needs.check-retraining-need.outputs.needs_retraining == 'true'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      needs.check-retraining-need.outputs.needs_retraining == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -166,6 +175,7 @@ jobs:
             })
   redeploy_api:
     needs: retrain-model
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
