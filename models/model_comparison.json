@@ -2,40 +2,40 @@
     "best_model": "Logistic Regression",
     "models": {
         "Logistic Regression": {
-            "accuracy": 0.78,
-            "precision": 0.47480916030534354,
-            "recall": 0.7641277641277642,
-            "f1_score": 0.5856873822975519,
-            "roc_auc": 0.8539494810681251,
+            "accuracy": 0.7795,
+            "precision": 0.4740061162079511,
+            "recall": 0.7616707616707616,
+            "f1_score": 0.58435438265787,
+            "roc_auc": 0.8539340573238878,
             "cv_recall_mean": 0.7570552147239263,
             "cv_recall_std": 0.028997060854224467
         },
         "Random Forest": {
-            "accuracy": 0.8375,
-            "precision": 0.593607305936073,
-            "recall": 0.6388206388206388,
-            "f1_score": 0.6153846153846153,
-            "roc_auc": 0.8568198398706872,
-            "cv_recall_mean": 0.6110429447852761,
-            "cv_recall_std": 0.03798730203782262
+            "accuracy": 0.841,
+            "precision": 0.6009070294784581,
+            "recall": 0.6511056511056511,
+            "f1_score": 0.625,
+            "roc_auc": 0.8565129073603649,
+            "cv_recall_mean": 0.6834355828220858,
+            "cv_recall_std": 0.03306059775535578
         },
         "Gradient Boosting": {
-            "accuracy": 0.856,
-            "precision": 0.6765578635014837,
+            "accuracy": 0.8555,
+            "precision": 0.6745562130177515,
             "recall": 0.5601965601965602,
-            "f1_score": 0.6129032258064516,
-            "roc_auc": 0.8573041454397389,
-            "cv_recall_mean": 0.48588957055214727,
-            "cv_recall_std": 0.03318559100932152
+            "f1_score": 0.6120805369127517,
+            "roc_auc": 0.8572717555768404,
+            "cv_recall_mean": 0.48711656441717793,
+            "cv_recall_std": 0.0336809257210081
         },
         "XGBoost": {
-            "accuracy": 0.8165,
-            "precision": 0.5367647058823529,
-            "recall": 0.7174447174447175,
-            "f1_score": 0.6140904311251314,
-            "roc_auc": 0.8543397017973289,
-            "cv_recall_mean": 0.6079754601226994,
-            "cv_recall_std": 0.03445428486404656
+            "accuracy": 0.816,
+            "precision": 0.5368620037807184,
+            "recall": 0.6977886977886978,
+            "f1_score": 0.6068376068376068,
+            "roc_auc": 0.8569370603268909,
+            "cv_recall_mean": 0.6098159509202453,
+            "cv_recall_std": 0.03748862850908511
         }
     }
 }

@@ -1,7 +1,7 @@
 # Prédiction du churn bancaire — pipeline MLOps
 
 [![CI](https://github.com/DenisMT22/bank-churn-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/DenisMT22/bank-churn-mlops/actions/workflows/ci-cd.yml)
-[![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg)](https://fastapi.tiangolo.com)
 [![Licence](https://img.shields.io/badge/Licence-MIT-green.svg)](LICENSE)
 
@@ -82,7 +82,7 @@ Pour le déployer sur votre propre compte :
    relier à GitHub.
 2. Cliquer sur **New app**, choisir ce dépôt et la branche `main`.
 3. Renseigner `streamlit_app.py` comme fichier principal.
-4. Laisser Python 3.10 ; les dépendances de `requirements.txt` sont
+4. Choisir Python 3.12 ; les dépendances de `requirements.txt` sont
    installées automatiquement.
 5. Déployer. Le premier démarrage entraîne le modèle, ce qui prend quelques
    secondes.
@@ -175,7 +175,7 @@ d'intégration continue, boucle de monitoring — est dans
 
 ### Prérequis
 
-- Python 3.10 ou 3.11
+- Python 3.12
 - Docker, facultatif
 
 ### Installation
@@ -261,12 +261,12 @@ Le script `train.py` compare automatiquement 4 algorithmes et sélectionne le me
 
 | Modèle | Accuracy | Precision | Recall ⭐ | F1-Score | ROC-AUC |
 |--------|----------|-----------|----------|----------|---------|
-| **Logistic Regression** 🏆 | 78.00% | 47.48% | **76.41%** | 58.57% | 85.39% |
-| XGBoost | 81.65% | 53.68% | 71.74% | 61.41% | 85.43% |
-| Random Forest | 83.75% | 59.36% | 63.88% | 61.54% | 85.68% |
-| Gradient Boosting | 85.60% | 67.66% | 56.02% | 61.29% | 85.73% |
+| **Logistic Regression** 🏆 | 77.95% | 47.40% | **76.17%** | 58.44% | 85.39% |
+| XGBoost | 81.60% | 53.69% | 69.78% | 60.68% | 85.69% |
+| Random Forest | 84.10% | 60.09% | 65.11% | 62.50% | 85.65% |
+| Gradient Boosting | 85.55% | 67.46% | 56.02% | 61.21% | 85.73% |
 
-> **🏆 Gagnant : Logistic Regression** avec un Recall de 76.41%
+> **🏆 Gagnant : Logistic Regression** avec un Recall de 76.17%
 
 > Ces vingt valeurs sont écrites par `make train-complet` dans
 > `models/model_comparison.json`. Aucune n'est saisie à la main.
@@ -275,7 +275,7 @@ Le script `train.py` compare automatiquement 4 algorithmes et sélectionne le me
 
 Bien que d'autres modèles aient une meilleure Accuracy, **Logistic Regression** a été sélectionné car :
 
-1. **Meilleur Recall (76.41%)** : Détecte le plus de churners
+1. **Meilleur Recall (76.17%)** : Détecte le plus de churners
 2. **Interprétabilité** : Coefficients explicables pour le métier
 3. **Rapidité** : Inférence ultra-rapide en production
 4. **Robustesse** : Moins de risque d'overfitting
@@ -285,12 +285,12 @@ Bien que d'autres modèles aient une meilleure Accuracy, **Logistic Regression**
 ```
               Prédit 0    Prédit 1
 Réel 0         1,249         344      (TN / FP)
-Réel 1            96         311      (FN / TP)
+Réel 1            97         310      (FN / TP)
 ```
 
 **Interprétation :**
-- **311 churners correctement identifiés** (True Positives)
-- **96 churners manqués** (False Negatives) - à minimiser
+- **310 churners correctement identifiés** (True Positives)
+- **97 churners manqués** (False Negatives) - à minimiser
 - **344 fausses alertes** (False Positives) - acceptables
 
 ### Métriques du Modèle Retenu
@@ -299,11 +299,11 @@ Mesurées sur le jeu de test de 2 000 clients, jamais vu à l'entraînement.
 
 | Métrique | Score |
 |----------|-------|
-| **Recall** | 76.41% |
-| **Precision** | 47.48% |
-| **F1-Score** | 58.57% |
+| **Recall** | 76.17% |
+| **Precision** | 47.40% |
+| **F1-Score** | 58.44% |
 | **ROC-AUC** | 85.39% |
-| **Accuracy** | 78.00% |
+| **Accuracy** | 77.95% |
 | Recall en validation croisée | 75.71% ± 2.90% |
 
 Une précision de 47% signifie qu'environ une alerte sur deux est une fausse
@@ -325,8 +325,8 @@ vers le départ, un coefficient négatif vers la fidélité.
 | `products_number` | +2.58 | Mais le nombre brut de produits joue en sens inverse |
 | `balance` | +1.33 | Un solde élevé accompagne les départs |
 | `BalancePerProduct` | −1.32 | Rapporté au nombre de produits, l'effet s'inverse |
-| `age` | +1.29 | Les clients plus âgés partent davantage |
-| `active_member` | −0.64 | Un membre actif reste |
+| `age` | +1.28 | Les clients plus âgés partent davantage |
+| `active_member` | −0.65 | Un membre actif reste |
 
 Les deux premières lignes se lisent ensemble : le modèle distingue le fait
 d'avoir plusieurs produits du nombre exact de produits détenus.
