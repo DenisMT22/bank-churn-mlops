@@ -6,14 +6,8 @@ Tests Unitaires pour l'API de Prédiction de Churn
 
 import pytest
 from fastapi.testclient import TestClient
-import sys
-import os
-from pathlib import Path
 
-# Ajouter le chemin src au PYTHONPATH
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
-
-from api.main import app
+from src.api.main import app
 
 # Client de test
 client = TestClient(app)
