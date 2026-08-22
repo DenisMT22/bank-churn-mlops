@@ -427,9 +427,11 @@ if __name__ == "__main__":
     import uvicorn
     
     # Lancer le serveur
+    # L'API est destinee a tourner dans un conteneur : elle doit ecouter sur
+    # toutes les interfaces pour etre joignable depuis l'hote.
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
+        "src.api.main:app",
+        host="0.0.0.0",  # nosec B104
         port=8080,
         reload=True,
         log_level="info"
