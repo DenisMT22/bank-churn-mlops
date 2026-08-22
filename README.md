@@ -1,43 +1,49 @@
-# Bank Churn Prediction - Pipeline MLOps Complet
+# Prédiction du churn bancaire — pipeline MLOps
 
+[![CI](https://github.com/DenisMT22/bank-churn-mlops/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/DenisMT22/bank-churn-mlops/actions/workflows/ci-cd.yml)
+[![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688.svg)](https://fastapi.tiangolo.com)
+[![Licence](https://img.shields.io/badge/Licence-MIT-green.svg)](LICENSE)
 
-La présentation + La vidéo du pipeline MLOps au complet sont consultables via ce lien https://drive.google.com/drive/folders/1bGnrVLeOrvdb0vtf8ifiAq_58H_oSlTe?usp=sharing
+Identifier les clients d'une banque sur le point de partir, de l'entraînement
+du modèle jusqu'à une API conteneurisée et un tableau de bord, avec tests,
+scan de secrets et détection de dérive.
 
+Le projet est **local d'abord** : tout tourne sur une machine de
+développement en une commande, sans compte cloud.
 
+```bash
+make setup    # dépendances puis entraînement complet
+make api      # API sur http://localhost:8080
+make dashboard
+```
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
-[![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-orange.svg)](https://cloud.google.com)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-black.svg)](https://github.com/features/actions)
-
-> **Pipeline MLOps de bout en bout** pour la prédiction du churn bancaire : de l'entraînement du modèle au déploiement en production avec monitoring automatisé.
-
-![Banner](docs/images/banner.png)
-
----
-
-## Table des Matières
-
-- [ Aperçu du Projet](#-aperçu-du-projet)
-- [ Fonctionnalités](#-fonctionnalités)
-- [ Architecture](#️-architecture)
-- [ Démarrage Rapide](#-démarrage-rapide)
-- [ Dataset](#-dataset)
-- [ Modèle ML](#-modèle-ml)
-- [ API Documentation](#-api-documentation)
-- [ Docker](#-docker)
-- [ Déploiement GCP](#️-déploiement-gcp)
-- [ Monitoring](#-monitoring)
-- [ CI/CD Pipeline](#-cicd-pipeline)
-- [ Compétences Acquises](#-compétences-acquises)
-- [ Structure du Projet](#-structure-du-projet)
-- [ Technologies Utilisées](#️-technologies-utilisées)
-
+![Comparaison des modèles](docs/metrics_comparison.png)
 
 ---
 
-## Aperçu du Projet
+## Sommaire
+
+- [Aperçu](#aperçu)
+- [Démo en ligne](#démo-en-ligne)
+- [Fonctionnalités](#fonctionnalités)
+- [Architecture](#architecture)
+- [Démarrage rapide](#démarrage-rapide)
+- [Jeu de données](#jeu-de-données)
+- [Modèle](#modèle)
+- [API](#api)
+- [Docker](#docker)
+- [Local d'abord, prêt pour le cloud](#local-dabord-prêt-pour-le-cloud)
+- [Monitoring](#monitoring)
+- [Intégration continue](#intégration-continue)
+- [Structure du projet](#structure-du-projet)
+- [Technologies](#technologies)
+- [Licence](#licence)
+
+
+---
+
+## Aperçu
 
 ### Contexte Business
 
@@ -64,23 +70,47 @@ et de `models/model_comparison.json`, régénérés par `make train-complet`.
 
 ---
 
+## Démo en ligne
+
+Le tableau de bord est déployable gratuitement sur **Streamlit Community
+Cloud**, sans serveur ni carte bancaire. Il charge le modèle dans son propre
+processus, et le régénère depuis la donnée versionnée s'il ne le trouve pas.
+
+Pour le déployer sur votre propre compte :
+
+1. Créer un compte sur [share.streamlit.io](https://share.streamlit.io) et le
+   relier à GitHub.
+2. Cliquer sur **New app**, choisir ce dépôt et la branche `main`.
+3. Renseigner `streamlit_app.py` comme fichier principal.
+4. Laisser Python 3.10 ; les dépendances de `requirements.txt` sont
+   installées automatiquement.
+5. Déployer. Le premier démarrage entraîne le modèle, ce qui prend quelques
+   secondes.
+
+Aucune configuration n'est nécessaire : le jeu de données source est
+versionné, donc l'application est autonome. Pour la faire pointer vers une
+API distante plutôt que sur le modèle local, définir `API_URL` dans les
+secrets de l'application.
+
+---
+
 ## Fonctionnalités
 
-### 🤖 Machine Learning
+### Machine learning
 - ✅ Exploration des données (EDA)
 - ✅ Feature engineering : 14 variables créées, 27 features vues par le modèle
 - ✅ Gestion du déséquilibre par SMOTE **et** `class_weight="balanced"`
 - ✅ Comparaison de 4 modèles (LR, RF, GB, XGBoost)
 - ✅ Interprétabilité par les coefficients du modèle
 
-### 🔌 API & Déploiement
+### API et déploiement
 - ✅ API REST avec FastAPI
 - ✅ Documentation Swagger/OpenAPI automatique
 - ✅ Conteneurisation Docker
 - ✅ Déploiement serverless sur GCP Cloud Run
 - ✅ Auto-scaling (0 à 10 instances)
 
-### 🔄 MLOps
+### MLOps
 - ✅ Pipeline CI/CD avec GitHub Actions
 - ✅ Tests automatisés (pytest)
 - ✅ Scan de secrets (gitleaks, en pre-commit et en CI)
@@ -88,7 +118,7 @@ et de `models/model_comparison.json`, régénérés par `make train-complet`.
 - ✅ Pipeline de réentraînement déclenché sur seuil
 - ✅ Versioning des modèles par horodatage
 
-### 🎨 Interface Utilisateur
+### Interface
 - ✅ Dashboard Streamlit interactif
 - ✅ Prédictions en temps réel
 - ✅ Visualisations des KPIs
@@ -111,94 +141,89 @@ des pistes, pas des fonctionnalités.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    RAW["data/raw<br/>10 000 clients"]
+    TRAIN["make train<br/>entrainement"]
+    ART["models/<br/>modele et preprocessor"]
+    API["FastAPI<br/>/predict"]
+    DASH["Streamlit<br/>tableau de bord"]
+    MON["Evidently<br/>derive et performance"]
+    CI["GitHub Actions<br/>lint, tests, image"]
+
+    RAW --> TRAIN
+    TRAIN --> ART
+    ART --> API
+    ART --> DASH
+    ART --> MON
+    RAW --> MON
+    TRAIN --> CI
+    API --> CI
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        GITHUB REPOSITORY                         │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐      │
-│  │  Code   │───▶│  Tests  │───▶│  Build  │───▶│ Deploy  │      │
-│  │  Push   │    │ Pytest  │    │ Docker  │    │Cloud Run│      │
-│  └─────────┘    └─────────┘    └─────────┘    └─────────┘      │
-│                                                     │            │
-└─────────────────────────────────────────────────────┼────────────┘
-                                                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    GOOGLE CLOUD PLATFORM                         │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  Cloud Run   │  │    GCS       │  │   Logging    │          │
-│  │   (API)      │◀▶│  (Modèles)   │  │ (Monitoring) │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│         │                                                        │
-└─────────┼────────────────────────────────────────────────────────┘
-          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLIENTS                                  │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │   Swagger    │  │  Streamlit   │  │  Applications│          │
-│  │     UI       │  │  Dashboard   │  │   Tierces    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+Une seule donnée est versionnée : le fichier source. Le preprocessor, le
+modèle et le jeu enrichi sont tous régénérés par `make train`, en trois
+secondes environ.
+
+Le détail — flux des données, pipeline d'entraînement, chaîne
+d'intégration continue, boucle de monitoring — est dans
+[docs/architecture.md](docs/architecture.md).
 
 ---
 
-## Démarrage Rapide
+## Démarrage rapide
 
 ### Prérequis
 
-- Python 3.11+
-- Docker (optionnel)
-- Compte GCP (pour déploiement cloud)
+- Python 3.10 ou 3.11
+- Docker, facultatif
 
-### Installation Locale
+### Installation
 
 ```bash
-# 1. Cloner le repository
 git clone https://github.com/DenisMT22/bank-churn-mlops.git
 cd bank-churn-mlops
 
-# 2. Créer l'environnement virtuel
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
-
-# 3. Installer les dépendances
-pip install -r requirements.txt
-
-# 4. Télécharger le dataset
-# Placer Bank_Churn_Prediction.csv dans data/raw/
-
-# 5. Entraîner le modèle
-cd src/models
-python train.py
-
-# 6. Lancer l'API
-cd ../api
-uvicorn main:app --reload --port 8080
-
-# 7. Lancer le Dashboard (nouveau terminal)
-cd ../..
-streamlit run streamlit_app.py
+make install        # environnement virtuel et dépendances
+make train          # entraîne le modèle retenu, environ 3 s
+make test           # 62 tests
 ```
 
-### Accès aux Interfaces
+Le jeu de données source est versionné : il n'y a rien à télécharger.
 
-| Interface | URL | Description |
-|-----------|-----|-------------|
-| API Swagger | http://localhost:8080/docs | Documentation interactive |
-| API ReDoc | http://localhost:8080/redoc | Documentation alternative |
-| Health Check | http://localhost:8080/health | État de l'API |
-| Dashboard | http://localhost:8501 | Interface Streamlit |
+`make train` régénère le preprocessor, le modèle, les métriques et le jeu
+enrichi. `make train-complet` compare les quatre modèles et reproduit les
+figures, en une minute environ.
+
+```bash
+make api            # API sur http://localhost:8080
+make dashboard      # tableau de bord sur http://localhost:8501
+make monitor        # rapports de dérive Evidently
+make lint           # ruff
+make scan           # recherche de secrets avec gitleaks
+make aide           # liste des cibles
+```
+
+### Interfaces locales
+
+| Interface | Adresse |
+|-----------|---------|
+| Documentation interactive de l'API | http://localhost:8080/docs |
+| Documentation alternative | http://localhost:8080/redoc |
+| État de l'API | http://localhost:8080/health |
+| Tableau de bord | http://localhost:8501 |
 
 ---
 
-## Dataset
+## Jeu de données
 
 ### Source
-**Bank Customer Churn Dataset** - [Kaggle](https://www.kaggle.com/datasets/gauravtopre/bank-customer-churn-dataset)
+
+**Bank Customer Churn Dataset**, déposé par gauravtopre sur
+[Kaggle](https://www.kaggle.com/datasets/gauravtopre/bank-customer-churn-dataset).
+Le jeu décrit une banque fictive et ne contient aucune donnée personnelle
+réelle. Il est versionné dans `data/raw/` pour que le projet soit
+reproductible sans téléchargement.
 
 ### Caractéristiques
 
@@ -228,7 +253,7 @@ streamlit run streamlit_app.py
 
 ---
 
-## Modèle ML
+## Modèle
 
 ### Comparaison des Modèles
 
@@ -310,7 +335,7 @@ d'avoir plusieurs produits du nombre exact de produits détenus.
 
 ---
 
-## API Documentation
+## API
 
 ### Endpoints
 
@@ -401,48 +426,39 @@ docker-compose up -d
 
 ---
 
-## Déploiement GCP
+## Local d'abord, prêt pour le cloud
 
-### Configuration Initiale
+Le projet a été déployé sur Google Cloud Run pendant son développement.
+L'abonnement associé n'est plus actif : **aucune instance n'est en ligne**,
+et le dépôt ne prétend pas le contraire. Tout fonctionne en local, et le
+chemin vers le cloud reste documenté.
+
+### Correspondance
+
+| Brique locale | Équivalent Google Cloud |
+|---------------|-------------------------|
+| `make api`, conteneur Docker | Cloud Run |
+| `models/` sur le disque | Cloud Storage |
+| Image Docker locale | Artifact Registry |
+| Journaux dans le terminal | Cloud Logging |
+| `make train` lancé à la main | Cloud Build ou Vertex AI Pipelines |
+
+### Réactiver le déploiement
+
+Le job `deploy` de la CI et le workflow de réentraînement existent toujours,
+mais ne se déclenchent **que manuellement**, depuis l'onglet Actions. Pour
+les remettre en service :
 
 ```bash
-# 1. Installer gcloud CLI
-# https://cloud.google.com/sdk/docs/install
-
-# 2. Authentification
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-
-# 3. Activer les APIs
-gcloud services enable cloudbuild.googleapis.com
-gcloud services enable run.googleapis.com
-gcloud services enable storage.googleapis.com
-
-# 4. Exécuter le script de setup
-chmod +x scripts/setup_gcp.sh
-./scripts/setup_gcp.sh
+./scripts/setup_gcp.sh    # projet, compte de service, buckets
 ```
 
-### Déploiement Manuel
+Puis définir dans les réglages du dépôt les secrets `GCP_PROJECT_ID` et
+`GCP_SA_KEY`.
 
-```bash
-# Build et push l'image
-gcloud builds submit --tag gcr.io/YOUR_PROJECT/churn-api
-
-# Déployer sur Cloud Run
-gcloud run deploy churn-api \
-  --image gcr.io/YOUR_PROJECT/churn-api \
-  --region europe-west1 \
-  --platform managed \
-  --allow-unauthenticated
-```
-
-### URL de Production
-
-Après déploiement, l'API est accessible à :
-```
-https://churn-api-xxxxx-ew.a.run.app
-```
+Le script écrit la clé du compte de service dans
+`~/.config/bank-churn-mlops/`, **jamais dans le dépôt**. En local,
+`gcloud auth application-default login` évite d'avoir une clé sur le disque.
 
 ---
 
@@ -458,11 +474,12 @@ Le monitoring utilise Evidently pour détecter :
 ### Génération des Rapports
 
 ```bash
-cd src/monitoring
-python evidently_monitor.py
+make monitor
 ```
 
-Les rapports HTML sont générés dans `monitoring/reports/`.
+Les rapports HTML sont générés dans `src/monitoring/reports/`, qui n'est pas
+versionné : ces fichiers pèsent plusieurs mégaoctets et sont régénérés à
+chaque exécution.
 
 ### Alertes Configurées
 
@@ -473,7 +490,7 @@ Les rapports HTML sont générés dans `monitoring/reports/`.
 
 ---
 
-## CI/CD Pipeline
+## Intégration continue
 
 ### Workflow GitHub Actions
 
@@ -543,124 +560,42 @@ on:
 
 ---
 
-## Compétences Acquises
-
-Ce projet a permis de développer et démontrer les compétences suivantes :
-
-### Data Science & Machine Learning
-
-| Compétence | Description |
-|------------|-------------|
-| **Analyse Exploratoire (EDA)** | Exploration statistique, visualisations, détection d'outliers |
-| **Feature Engineering** | Création de 14 variables métier, 27 features en entrée du modèle |
-| **Modélisation ML** | Entraînement, comparaison et sélection de modèles |
-| **Gestion du Déséquilibre** | SMOTE et pondération des classes, échantillonnage stratifié |
-| **Évaluation de Modèles** | Métriques adaptées (Recall prioritaire), cross-validation |
-| **Interprétabilité** | Lecture des coefficients du modèle retenu |
-
-### Développement & API
-
-| Compétence | Description |
-|------------|-------------|
-| **Développement API REST** | Conception et implémentation avec FastAPI |
-| **Documentation API** | OpenAPI/Swagger, schémas Pydantic |
-| **Tests Unitaires** | pytest, tests d'API sur les endpoints |
-| **Validation de Données** | Schémas Pydantic, gestion des erreurs |
-| **Logging & Monitoring** | Logs structurés, métriques applicatives |
-
-### DevOps & Infrastructure
-
-| Compétence | Description |
-|------------|-------------|
-| **Conteneurisation** | Docker, Docker Compose, optimisation images |
-| **CI/CD** | GitHub Actions, pipelines automatisés |
-| **Cloud Computing** | GCP Cloud Run, Cloud Storage, IAM |
-| **Infrastructure as Code** | Scripts de déploiement automatisés |
-| **Gestion des Secrets** | Variables d'environnement, scan gitleaks, aucun identifiant versionné |
-
-### MLOps
-
-| Compétence | Description |
-|------------|-------------|
-| **Pipeline ML Automatisé** | Preprocessing → Training → Deployment |
-| **Versioning de Modèles** | Horodatage des modèles, comparaison des exécutions |
-| **Monitoring ML** | Détection de drift avec Evidently |
-| **Retraining Automatique** | Pipelines déclenchés sur conditions |
-| **Reproductibilité** | Pipeline régénérable depuis la donnée source, graine fixée |
-
-### Gestion de Projet
-
-| Compétence | Description |
-|------------|-------------|
-| **Rédaction de Cahier des Charges** | Expression des besoins, spécifications |
-| **Documentation Technique** | README, API docs, architecture |
-| **Présentation** | Communication technique et business |
-| **Versioning** | Git, branching strategy, pull requests |
-
----
-
-## Structure du Projet
+## Structure du projet
 
 ```
 bank-churn-mlops/
-├── 📁 .github/
-│   └── workflows/
-│       ├── ci-cd.yml              # Pipeline CI/CD principal
-│       └── retrain.yml            # Pipeline de retraining
-├── 📁 data/
-│   ├── raw/                       # Données brutes
-│   │   └── Churn_Modelling.csv
-│   └── processed/                 # Données transformées
-├── 📁 models/
-│   ├── trained/                   # Modèles entraînés
-│   │   └── model_latest.pkl
-│   ├── preprocessor.pkl           # Pipeline de preprocessing
-│   └── model_metadata.json        # Métadonnées du modèle
-├── 📁 src/
-│   ├── api/
-│   │   ├── __init__.py
-│   │   ├── main.py               # Application FastAPI
-│   │   └── schemas.py            # Schémas Pydantic
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── preprocessing.py      # Pipeline de preprocessing
-│   │   ├── train.py              # Script d'entraînement
-│   │   └── retrain.py            # Script de retraining
-│   └── monitoring/
-│       ├── __init__.py
-│       └── evidently_monitor.py  # Monitoring ML
-├── 📁 tests/
-│   ├── test_api.py               # Tests API
-│   ├── test_preprocessing.py     # Tests preprocessing
-│   └── test_model.py             # Tests modèle
-├── 📁 notebooks/
-│   └── 01_eda.ipynb              # Exploration des données
-├── 📁 deployment/
-│   ├── Dockerfile                # Image Docker
-│   ├── docker-compose.yml        # Orchestration locale
-│   └── cloudbuild.yaml           # GCP Cloud Build
-├── 📁 monitoring/
-│   └── reports/                  # Rapports Evidently
-├── 📁 scripts/
-│   ├── setup_gcp.sh              # Configuration GCP
-│   └── deploy.sh                 # Script de déploiement
-├── 📁 docs/
-│   ├── api_documentation.md      # Documentation API
-│   ├── architecture.md           # Documentation architecture
-│   └── images/                   # Images documentation
-├── 📁 presentation/
-│   └── slides.html               # Présentation
-├── 📄 .gitignore
-├── 📄 .dockerignore
-├── 📄 requirements.txt           # Dépendances Python
-├── 📄 requirements-dev.txt       # Dépendances développement
-├── 📄 streamlit_app.py           # Dashboard Streamlit
-└── 📄 README.md                  # Ce fichier
+├── data/
+│   ├── raw/Bank_Churn_Prediction.csv   # seule donnée versionnée
+│   └── processed/                      # régénéré par make train
+├── models/
+│   ├── model_metadata.json             # métriques, source de vérité
+│   ├── model_comparison.json           # comparaison des quatre modèles
+│   ├── preprocessor.pkl                # régénéré
+│   └── trained/                        # régénéré
+├── src/
+│   ├── api/            # FastAPI : main.py, schemas.py
+│   ├── models/         # preprocessing.py, train.py, retrain.py
+│   ├── monitoring/     # evidently_monitor.py
+│   └── utils/          # config.py, chemins du projet
+├── tests/              # test_api.py, test_model.py, test_preprocessing.py
+├── notebooks/01_eda.ipynb
+├── deployment/         # Dockerfile, docker-compose.yml, cloudbuild.yaml
+├── scripts/            # setup_gcp.sh, deploy.sh
+├── docs/               # architecture.md et figures
+├── .github/workflows/  # ci-cd.yml, retrain.yml
+├── streamlit_app.py    # tableau de bord
+├── Makefile
+├── requirements.txt        # exécution
+├── requirements-dev.txt    # tests et qualité
+└── requirements-gcp.txt    # cloud, optionnel
 ```
+
+Les artefacts marqués « régénéré » ne sont pas versionnés : `make train` les
+reconstruit depuis la donnée source.
 
 ---
 
-## Technologies Utilisées
+## Technologies
 
 ### Machine Learning
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -684,3 +619,11 @@ bank-churn-mlops/
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
 
+---
+
+## Licence
+
+Distribué sous licence MIT. Voir [LICENSE](LICENSE).
+
+Le jeu de données provient de Kaggle et reste soumis aux conditions de son
+auteur.
