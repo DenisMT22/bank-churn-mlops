@@ -492,19 +492,20 @@ chaque exécution.
 
 ## Intégration continue
 
-### Workflow GitHub Actions
+Trois mécanismes coexistent, à des degrés d'automatisation différents.
+Le tableau ci-dessous dit lequel tourne réellement.
 
-```yaml
-# .github/workflows/ci-cd.yml
-on:
-  push:
-    branches: [main]
+| Mécanisme | Déclenchement | État |
+|-----------|---------------|------|
+| Intégration continue | Automatique, à chaque poussée | **Actif** |
+| Déploiement du tableau de bord | Automatique, à chaque poussée | **Actif** une fois le dépôt connecté |
+| Déploiement de l'API sur Cloud Run | Manuel uniquement | **En sommeil** |
 
-jobs:
-  test → build → deploy
-```
+### Intégration continue — active
 
-### Étapes du Pipeline
+À chaque poussée et à chaque pull request, GitHub Actions exécute le lint,
+les tests, le scan de secrets et la construction de l'image Docker. C'est
+gratuit sur un dépôt public.
 
 Le cœur du pipeline ne dépend d'aucun compte cloud : les quatre premiers
 jobs tournent entièrement sur le runner GitHub.
@@ -548,14 +549,47 @@ make test                                  # la suite
 pytest tests/ --cov=src --cov-report=term  # avec la couverture
 ```
 
-### Retraining Automatique
+### Déploiement continu du tableau de bord — actif
+
+Une fois le dépôt connecté à Streamlit Community Cloud, chaque poussée sur
+`main` redéploie automatiquement le tableau de bord. C'est le seul
+déploiement continu réellement en service sur ce projet, et il est gratuit.
+
+Le tableau de bord est autonome : il charge le modèle dans son propre
+processus et le régénère depuis la donnée versionnée. Aucun serveur ni
+secret n'est nécessaire. La marche à suivre est dans la section
+[Démo en ligne](#démo-en-ligne).
+
+### Déploiement de l'API sur Cloud Run — en sommeil
+
+Le job `deploy` construit l'image, la pousse sur Artifact Registry et
+déploie sur Cloud Run. Il ne se déclenche **que manuellement**, depuis
+l'onglet Actions :
 
 ```yaml
-# .github/workflows/retrain.yml
-on:
-  schedule:
-    - cron: '0 2 * * 1'  # Tous les lundis à 2h
-  workflow_dispatch:      # Déclenchement manuel
+if: github.event_name == 'workflow_dispatch'
+```
+
+L'abonnement Google Cloud associé au projet n'est plus actif : **aucune
+instance n'est en ligne**. Le code du déploiement est conservé parce qu'il a
+fonctionné et qu'il documente le chemin vers le cloud, pas parce qu'il
+tourne aujourd'hui.
+
+La condition porte sur l'événement et non sur la présence d'un secret :
+GitHub n'évalue pas le contexte `secrets` dans la condition d'un job, une
+garde de ce type serait décorative.
+
+### Réentraînement — manuel
+
+`.github/workflows/retrain.yml` suit la même logique. Il se déclenchait
+auparavant chaque lundi et à chaque modification de `data/raw` ; comme
+toutes ses étapes passent par Cloud Storage, il échouait à chaque
+exécution. Il est passé en déclenchement manuel.
+
+En local, le réentraînement fonctionne sans cloud :
+
+```bash
+python -m src.models.retrain
 ```
 
 ---
