@@ -5,6 +5,11 @@
 
 set -e  # Arrêter en cas d'erreur
 
+
+# Racine du projet, calculee depuis l'emplacement de ce script : les
+# chemins ne dependent donc pas du repertoire courant.
+RACINE_PROJET="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo "============================================================"
 echo "   CONFIGURATION GCP - MLOPS CHURN PREDICTION"
 echo "============================================================"
@@ -96,23 +101,54 @@ done
 echo "✅ Permissions attribuées"
 
 # 5. Créer la clé du Service Account
+#
+# La clé est écrite HORS du dépôt, dans le répertoire de configuration de
+# l'utilisateur. Une version antérieure de ce script l'écrivait à la racine
+# du projet : un fichier .gitignore était alors la seule chose qui séparait
+# une clé privée d'un dépôt public. Un .gitignore mal édité, un git add -f
+# ou un clone copié suffisaient à la faire fuir.
+#
+# En local, plutôt qu'une clé de compte de service, préférer :
+#   gcloud auth application-default login
+# En intégration continue, passer par un secret GitHub, jamais par un fichier.
 echo ""
 echo "🔑 5. Création de la clé du Service Account..."
-KEY_FILE="gcp-key.json"
+
+KEY_DIR="${BANK_CHURN_CONFIG_DIR:-$HOME/.config/bank-churn-mlops}"
+KEY_FILE="$KEY_DIR/gcp-key.json"
+
+mkdir -p "$KEY_DIR"
+chmod 700 "$KEY_DIR"
+
+creer_cle() {
+    gcloud iam service-accounts keys create "$KEY_FILE" \
+        --iam-account="$SERVICE_ACCOUNT_EMAIL"
+    # Lecture réservée au propriétaire.
+    chmod 600 "$KEY_FILE"
+    echo "✅ Clé créée : $KEY_FILE"
+    echo "   Pour l'utiliser :"
+    echo "     export GOOGLE_APPLICATION_CREDENTIALS=\"$KEY_FILE\""
+    echo "   Ne jamais copier ce fichier dans le dépôt."
+}
 
 if [ -f "$KEY_FILE" ]; then
-    read -p "  ⚠️  $KEY_FILE existe. Le remplacer? (y/n): " REPLACE
+    read -p "  ⚠️  Une clé existe déjà dans $KEY_DIR. La remplacer ? (y/n) : " REPLACE
     if [ "$REPLACE" != "y" ]; then
         echo "  ⏭️  Clé non remplacée"
     else
-        gcloud iam service-accounts keys create $KEY_FILE \
-            --iam-account=$SERVICE_ACCOUNT_EMAIL
-        echo "✅ Nouvelle clé créée: $KEY_FILE"
+        creer_cle
     fi
 else
-    gcloud iam service-accounts keys create $KEY_FILE \
-        --iam-account=$SERVICE_ACCOUNT_EMAIL
-    echo "✅ Clé créée: $KEY_FILE"
+    creer_cle
+fi
+
+# Garde-fou : aucune clé ne doit trainer dans l'arbre du projet.
+CLES_EGAREES="$(find "$RACINE_PROJET" -name '*gcp-key*.json' -not -path '*/venv/*' 2>/dev/null || true)"
+if [ -n "$CLES_EGAREES" ]; then
+    echo ""
+    echo "  ⛔ Une clé a été trouvée dans le dépôt :"
+    echo "$CLES_EGAREES"
+    echo "  La supprimer et révoquer la clé correspondante dans la console IAM."
 fi
 
 # 6. Créer les buckets Cloud Storage
@@ -141,22 +177,22 @@ fi
 echo ""
 echo "📤 7. Upload des modèles vers GCS..."
 
-if [ -f "../models/trained/model_latest.pkl" ]; then
-    gsutil cp ../models/trained/model_latest.pkl gs://$BUCKET_MODELS/
+if [ -f "$RACINE_PROJET/models/trained/model_latest.pkl" ]; then
+    gsutil cp "$RACINE_PROJET/models/trained/model_latest.pkl" "gs://$BUCKET_MODELS/"
     echo "✅ model_latest.pkl uploadé"
 else
     echo "  ⚠️  Modèle non trouvé (entraîner d'abord)"
 fi
 
-if [ -f "../models/preprocessor.pkl" ]; then
-    gsutil cp ../models/preprocessor.pkl gs://$BUCKET_MODELS/
+if [ -f "$RACINE_PROJET/models/preprocessor.pkl" ]; then
+    gsutil cp "$RACINE_PROJET/models/preprocessor.pkl" "gs://$BUCKET_MODELS/"
     echo "✅ preprocessor.pkl uploadé"
 else
     echo "  ⚠️  Preprocessor non trouvé"
 fi
 
-if [ -f "../models/model_metadata.json" ]; then
-    gsutil cp ../models/model_metadata.json gs://$BUCKET_MODELS/
+if [ -f "$RACINE_PROJET/models/model_metadata.json" ]; then
+    gsutil cp "$RACINE_PROJET/models/model_metadata.json" "gs://$BUCKET_MODELS/"
     echo "✅ model_metadata.json uploadé"
 else
     echo "  ⚠️  Métadonnées non trouvées"
@@ -171,16 +207,19 @@ echo "  1. Allez sur: https://github.com/VOTRE-USERNAME/VOTRE-REPO/settings/secr
 echo "  2. Ajoutez ces secrets:"
 echo ""
 echo "     GCP_PROJECT_ID = $PROJECT_ID"
-echo "     GCP_SA_KEY = (contenu de $KEY_FILE)"
+echo "     GCP_SA_KEY = (contenu JSON brut de $KEY_FILE)"
 echo ""
-echo "  Pour GCP_SA_KEY, copiez le contenu avec:"
-echo "     cat $KEY_FILE | base64"
+echo "  Pour GCP_SA_KEY, copier le contenu tel quel :"
+echo "     cat \"$KEY_FILE\""
+echo "  Ne pas encoder en base64 : l'action d'authentification attend le JSON brut."
 echo ""
 
 # 9. Créer fichier .env local
 echo ""
 echo "📝 9. Création du fichier .env local..."
-cat > ../.env << EOF
+# Ecrit a la racine du projet, quel que soit le repertoire d'ou le script
+# est lance. Ce fichier ne contient que de la configuration, aucun secret.
+cat > "$RACINE_PROJET/.env" << EOF
 # Configuration GCP
 PROJECT_ID=$PROJECT_ID
 REGION=$REGION
