@@ -489,11 +489,47 @@ jobs:
 
 ### Étapes du Pipeline
 
-1. **Scan de secrets** : gitleaks sur l'historique et les fichiers
-2. **Test** : pytest sur la suite de tests
-3. **Build** : construction de l'image Docker
-4. **Deploy** : déploiement Cloud Run
-5. **Verify** : smoke tests post-déploiement
+Le cœur du pipeline ne dépend d'aucun compte cloud : les quatre premiers
+jobs tournent entièrement sur le runner GitHub.
+
+| Job | Contenu | Bloquant |
+|-----|---------|----------|
+| `secret-scan` | gitleaks sur tout l'historique et sur les fichiers | oui |
+| `lint` | ruff pour le style, bandit pour la sécurité statique | oui |
+| `test` | entraînement réel puis pytest | oui |
+| `docker-build` | build de l'image, démarrage, `/health` et une prédiction | oui |
+| `deploy` | Cloud Run — **déclenchement manuel uniquement** | non |
+
+Aucun filtre de chemin n'est appliqué : chaque poussée déclenche l'ensemble
+du pipeline, y compris le scan de secrets. Un filtre laisserait passer sans
+contrôle un commit ne touchant pas à `src/`, ce qui est exactement le cas
+d'une clé déposée à la racine.
+
+Le job `test` entraîne réellement le modèle depuis `data/raw` avant de
+lancer la suite, puis compare les métriques régénérées à celles versionnées.
+Il n'y a plus ni `continue-on-error`, ni artefacts factices.
+
+### Tests
+
+62 tests, répartis en trois fichiers :
+
+| Fichier | Portée |
+|---------|--------|
+| `test_preprocessing.py` | Création des features, encodage, cohérence des colonnes |
+| `test_model.py` | Chargement des artefacts, forme des sorties, déterminisme, métriques |
+| `test_api.py` | Endpoints, validation des entrées, gestion des erreurs |
+
+Couverture mesurée : **25 % des lignes de `src/`**. Le détail est plus
+parlant que le total : `schemas.py` 100 %, `preprocessing.py` 70 %,
+`api/main.py` 40 %, tandis que `train.py`, `retrain.py` et
+`evidently_monitor.py` sont à 0 % — ce sont des scripts exécutés de bout
+en bout, non couverts par des tests unitaires. C'est le chiffre réel,
+pas un objectif.
+
+```bash
+make test                                  # la suite
+pytest tests/ --cov=src --cov-report=term  # avec la couverture
+```
 
 ### Retraining Automatique
 
