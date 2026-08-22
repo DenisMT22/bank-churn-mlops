@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.12"
   IMAGE_NAME: churn-prediction-api
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Historique complet : le scan porte sur tous les commits, pas
           # seulement sur le dernier état des fichiers.
@@ -56,10 +56,10 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -85,10 +85,10 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -162,7 +162,7 @@ jobs:
 
       - name: Conserver le rapport de couverture
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rapport-couverture
           path: coverage.xml
@@ -180,10 +180,10 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -254,10 +254,10 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip

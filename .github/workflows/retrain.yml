@@ -27,7 +27,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  PYTHON_VERSION: '3.10'
+  PYTHON_VERSION: '3.12'
   REGION: europe-west1
   SERVICE_NAME: churn-prediction-api
   IMAGE_NAME: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/churn-prediction-api/churn-prediction-api
@@ -39,8 +39,8 @@ jobs:
     outputs:
       needs_retraining: ${{ steps.check.outputs.needs_retraining }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -69,7 +69,7 @@ jobs:
           else
             echo "needs_retraining=true" >> $GITHUB_OUTPUT
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: monitoring-report
           path: monitoring/
@@ -82,8 +82,8 @@ jobs:
       needs.check-retraining-need.outputs.needs_retraining == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -129,7 +129,7 @@ jobs:
           echo "Model uploaded to GCS"
       - name: Upload training artifacts
         if: steps.retrain.outputs.model_deployed == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: training-artifacts
           path: |
@@ -162,7 +162,7 @@ jobs:
           fi
       - name: Comment retraining report on PR
         if: github.event_name == 'pull_request' && steps.retrain.outputs.model_deployed == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -178,7 +178,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
       with:
