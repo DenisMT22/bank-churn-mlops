@@ -7,10 +7,22 @@ Tests Unitaires pour l'API de Prédiction de Churn
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app
+from src.api.main import app, load_model_and_preprocessor
 
 # Client de test
 client = TestClient(app)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def charger_les_artefacts():
+    """
+    Charger le modele avant la suite.
+
+    TestClient ne declenche l'evenement de demarrage de FastAPI que dans un
+    gestionnaire de contexte. Sans cette fixture, l'API repond 503 a toute
+    prediction et les tests correspondants ne verifient plus rien.
+    """
+    load_model_and_preprocessor()
 
 
 class TestHealthEndpoint:
@@ -65,20 +77,19 @@ class TestMetricsEndpoint:
         """Test que l'endpoint metrics existe"""
         response = client.get("/metrics")
         # Peut être 200 ou 503 selon si le modèle est chargé
-        assert response.status_code in [200, 503]
+        assert response.status_code == 200
     
     def test_metrics_response_structure_when_available(self):
         """Test la structure si les métriques sont disponibles"""
         response = client.get("/metrics")
         
-        if response.status_code == 200:
-            data = response.json()
-            assert "model_name" in data
-            assert "accuracy" in data
-            assert "precision" in data
-            assert "recall" in data
-            assert "f1_score" in data
-            assert "roc_auc" in data
+        data = response.json()
+        assert "model_name" in data
+        assert "accuracy" in data
+        assert "precision" in data
+        assert "recall" in data
+        assert "f1_score" in data
+        assert "roc_auc" in data
 
 
 class TestPredictionEndpoint:
@@ -106,20 +117,19 @@ class TestPredictionEndpoint:
         """Test que l'endpoint predict existe"""
         response = client.post("/predict", json=valid_customer_data)
         # 200 si modèle chargé, 503 sinon
-        assert response.status_code in [200, 503]
+        assert response.status_code == 200
     
     def test_predict_with_valid_data(self, valid_customer_data):
         """Test prédiction avec données valides"""
         response = client.post("/predict", json=valid_customer_data)
         
-        if response.status_code == 200:
-            data = response.json()
-            assert "churn_prediction" in data
-            assert "churn_probability" in data
-            assert "risk_level" in data
-            assert data["churn_prediction"] in [0, 1]
-            assert 0 <= data["churn_probability"] <= 1
-            assert data["risk_level"] in ["Low", "Medium", "High"]
+        data = response.json()
+        assert "churn_prediction" in data
+        assert "churn_probability" in data
+        assert "risk_level" in data
+        assert data["churn_prediction"] in [0, 1]
+        assert 0 <= data["churn_probability"] <= 1
+        assert data["risk_level"] in ["Low", "Medium", "High"]
     
     def test_predict_with_invalid_credit_score(self):
         """Test avec CreditScore invalide"""
@@ -207,19 +217,18 @@ class TestBatchPredictionEndpoint:
     def test_batch_predict_endpoint_exists(self, valid_batch_data):
         """Test que l'endpoint batch existe"""
         response = client.post("/predict/batch", json=valid_batch_data)
-        assert response.status_code in [200, 503]
+        assert response.status_code == 200
     
     def test_batch_predict_with_valid_data(self, valid_batch_data):
         """Test batch avec données valides"""
         response = client.post("/predict/batch", json=valid_batch_data)
         
-        if response.status_code == 200:
-            data = response.json()
-            assert "predictions" in data
-            assert "total_customers" in data
-            assert "high_risk_count" in data
-            assert len(data["predictions"]) == 2
-            assert data["total_customers"] == 2
+        data = response.json()
+        assert "predictions" in data
+        assert "total_customers" in data
+        assert "high_risk_count" in data
+        assert len(data["predictions"]) == 2
+        assert data["total_customers"] == 2
     
     def test_batch_predict_empty_list(self):
         """Test batch avec liste vide"""
@@ -288,10 +297,12 @@ class TestPerformance:
         start = time.time()
         response = client.post("/predict", json=valid_customer_data)
         latency = (time.time() - start) * 1000  # ms
-        
-        if response.status_code == 200:
-            # La prédiction devrait prendre moins de 1 seconde
-            assert latency < 1000, f"Latency trop élevée: {latency:.2f}ms"
+
+        # La réponse doit être valide, pas seulement rapide.
+        assert response.status_code == 200
+        # Mesure locale, sans réseau : elle borne le coût du modèle, pas
+        # une latence de production.
+        assert latency < 1000, f"Latence trop élevée : {latency:.2f} ms"
 
 
 if __name__ == "__main__":
