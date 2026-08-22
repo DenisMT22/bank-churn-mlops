@@ -14,7 +14,6 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
-import numpy as np
 import joblib
 import json
 import time
@@ -34,7 +33,7 @@ except ImportError:  # pragma: no cover - depend du mode d'execution
 # Import des schémas
 from .schemas import (
     CustomerFeatures, PredictionResponse, BatchPredictionRequest,
-    BatchPredictionResponse, HealthResponse, ModelMetrics, ErrorResponse
+    BatchPredictionResponse, HealthResponse, ModelMetrics
 )
 
 # Configuration du logging

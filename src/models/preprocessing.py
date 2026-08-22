@@ -11,8 +11,6 @@ import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 import joblib
 import warnings
 from pathlib import Path
@@ -391,7 +389,7 @@ def prepare_data_for_training(data_path, target_col='churn', test_size=0.2, rand
     X = df.drop(columns=[target_col])
     y = df[target_col]
     
-    print(f"\nDistribution cible (avant split):")
+    print("\nDistribution cible (avant split):")
     print(f"  Non-Churners (0): {(y==0).sum():,} ({(y==0).sum()/len(y)*100:.1f}%)")
     print(f"  Churners (1): {(y==1).sum():,} ({(y==1).sum()/len(y)*100:.1f}%)")
     
@@ -400,7 +398,7 @@ def prepare_data_for_training(data_path, target_col='churn', test_size=0.2, rand
         X, y, test_size=test_size, random_state=random_state, stratify=y
     )
     
-    print(f"\n✅ Split effectué :")
+    print("\n✅ Split effectué :")
     print(f"  Train set : {X_train.shape[0]:,} samples")
     print(f"  Test set : {X_test.shape[0]:,} samples")
     
@@ -415,7 +413,7 @@ def prepare_data_for_training(data_path, target_col='churn', test_size=0.2, rand
     X_train_processed = preprocessor.fit_transform(X_train)
     X_test_processed = preprocessor.transform(X_test)
     
-    print(f"✅ Preprocessing terminé")
+    print("✅ Preprocessing terminé")
     print(f"  Nombre de features finales : {X_train_processed.shape[1]}")
     print(f"  Features créées : {len(preprocessor.get_feature_names())}")
     

@@ -1,0 +1,26 @@
+# Configuration du linter, pour que `make lint` et la CI verifient la
+# meme chose que ce qui tourne en local.
+
+line-length = 100
+target-version = "py310"
+
+# Regles activees : erreurs de style (E) et detection des problemes reels
+# comme les imports ou variables inutilises (F). Les avertissements
+# d'espaces en fin de ligne (W) sont volontairement laisses de cote : ils
+# noieraient le signal utile sous des centaines de lignes sans effet.
+select = ["E", "F"]
+
+exclude = [
+    "venv",
+    ".venv",
+    "notebooks",
+]
+
+[per-file-ignores]
+# Les lignes longues des messages d'affichage ne genent pas la lecture.
+"streamlit_app.py" = ["E501"]
+"src/monitoring/evidently_monitor.py" = ["E501"]
+"src/models/train.py" = ["E501"]
+"src/models/retrain.py" = ["E501"]
+"src/models/preprocessing.py" = ["E501"]
+"src/api/main.py" = ["E501"]

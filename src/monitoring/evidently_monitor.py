@@ -10,7 +10,6 @@ Ce module utilise Evidently pour détecter :
 """
 
 import pandas as pd
-import numpy as np
 from datetime import datetime
 import json
 import logging
@@ -31,15 +30,7 @@ from evidently.report import Report
 from evidently.metric_preset import (
     DataDriftPreset,
     DataQualityPreset,
-    TargetDriftPreset,
     ClassificationPreset
-)
-from evidently.metrics import (
-    DatasetDriftMetric,
-    DatasetMissingValuesMetric,
-    ClassificationQualityMetric,
-    ClassificationClassBalance,
-    ClassificationConfusionMatrix
 )
 from evidently.test_suite import TestSuite
 from evidently.tests import (
@@ -476,8 +467,6 @@ def main():
     Exemple d'utilisation
     """
     import joblib
-    import sys
-    import os
 
     from src.models.preprocessing import prepare_data_for_training
     
@@ -516,14 +505,14 @@ def main():
     # 5. Générer les rapports
     print("\n📊 Génération des rapports...")
     drift_report = monitor.generate_data_drift_report(test_df)
-    perf_report = monitor.generate_model_performance_report(test_df)
+    monitor.generate_model_performance_report(test_df)
     test_results = monitor.run_test_suite(test_df)
     
     # 6. Vérifier besoin de réentraînement
     needs_retraining, reason, details = monitor.check_need_for_retraining(test_df)
     
     print(f"\n{'='*60}")
-    print(f"RÉSULTATS DU MONITORING")
+    print("RÉSULTATS DU MONITORING")
     print(f"{'='*60}")
     print(f"Dérive détectée : {drift_report['dataset_drift_detected']}")
     print(f"Tests réussis : {test_results['passed_tests']}/{test_results['total_tests']}")
@@ -534,7 +523,7 @@ def main():
     # 7. Sauvegarder résumé
     monitor.save_monitoring_summary(test_df)
     
-    print(f"\n✅ Test du monitoring terminé")
+    print("\n✅ Test du monitoring terminé")
     print(f"📁 Rapports disponibles dans : {monitor.output_dir}")
 
 

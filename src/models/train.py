@@ -6,7 +6,6 @@ Ce script entraîne plusieurs modèles, les compare et sauvegarde le meilleur.
 
 """
 
-import pandas as pd
 import numpy as np
 import matplotlib
 
@@ -24,8 +23,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    roc_auc_score, confusion_matrix, classification_report,
-    roc_curve, precision_recall_curve
+    roc_auc_score, confusion_matrix, roc_curve
 )
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from imblearn.over_sampling import SMOTE
@@ -156,7 +154,7 @@ class ModelTrainer:
             X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
             print(f"  Avant SMOTE : {X_train.shape[0]:,} samples")
             print(f"  Après SMOTE : {X_train_resampled.shape[0]:,} samples")
-            print(f"  Distribution après SMOTE :")
+            print("  Distribution après SMOTE :")
             print(f"    Classe 0 : {(y_train_resampled==0).sum():,}")
             print(f"    Classe 1 : {(y_train_resampled==1).sum():,}")
         else:
@@ -205,17 +203,17 @@ class ModelTrainer:
             }
             
             # Afficher métriques
-            print(f"\n📊 Métriques sur Test Set :")
+            print("\n📊 Métriques sur Test Set :")
             print(f"  Accuracy  : {metrics['accuracy']:.4f}")
             print(f"  Precision : {metrics['precision']:.4f}")
             print(f"  Recall    : {metrics['recall']:.4f} ⭐")
             print(f"  F1-Score  : {metrics['f1_score']:.4f}")
             print(f"  ROC-AUC   : {metrics['roc_auc']:.4f}")
-            print(f"\n📊 Cross-Validation (Recall) :")
+            print("\n📊 Cross-Validation (Recall) :")
             print(f"  Moyenne : {metrics['cv_recall_mean']:.4f}")
             print(f"  Std Dev : {metrics['cv_recall_std']:.4f}")
             
-            print(f"\n🔢 Matrice de Confusion :")
+            print("\n🔢 Matrice de Confusion :")
             print(f"  TN: {cm[0,0]:4d}  |  FP: {cm[0,1]:4d}")
             print(f"  FN: {cm[1,0]:4d}  |  TP: {cm[1,1]:4d}")
         
@@ -237,7 +235,7 @@ class ModelTrainer:
         best_score = 0
         best_name = None
         
-        print(f"\n📊 Comparaison des modèles :")
+        print("\n📊 Comparaison des modèles :")
         for name, result in self.results.items():
             score = result['metrics'][metric]
             print(f"  {name:25s} : {score:.4f}")
@@ -428,7 +426,7 @@ class ModelTrainer:
                 )
             print(f"✅ Comparaison sauvegardée : {metadata_path}model_comparison.json")
         
-        print(f"\n📋 Résumé du modèle sauvegardé :")
+        print("\n📋 Résumé du modèle sauvegardé :")
         print(f"  Nom : {self.best_model_name}")
         print(f"  Recall : {metadata['metrics']['recall']:.4f}")
         print(f"  Precision : {metadata['metrics']['precision']:.4f}")

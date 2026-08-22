@@ -12,7 +12,6 @@ Ce script automatise le réentraînement du modèle :
 """
 
 import pandas as pd
-import numpy as np
 from datetime import datetime
 import joblib
 import json
@@ -22,10 +21,6 @@ from pathlib import Path
 import sys
 from typing import Dict, Tuple
 
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score,
-    f1_score, roc_auc_score
-)
 
 # Import des modules custom
 sys.path.append('..')
@@ -37,8 +32,10 @@ except ImportError:  # pragma: no cover - depend du mode d'execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from src.utils import config
 
-from src.models.preprocessing import DataPreprocessor, prepare_data_for_training
-from src.models.train import ModelTrainer
+# Ces imports suivent volontairement le bloc ci-dessus : ils dependent du
+# chemin que celui-ci installe.
+from src.models.preprocessing import prepare_data_for_training  # noqa: E402
+from src.models.train import ModelTrainer  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -326,13 +323,13 @@ class AutoRetrainer:
             # 3. Sauvegarder le preprocessor
             preprocessor_path = self.models_dir / 'preprocessor.pkl'
             joblib.dump(new_preprocessor, preprocessor_path)
-            logger.info(f"✅ Preprocessor sauvegardé")
+            logger.info("✅ Preprocessor sauvegardé")
             
             # 4. Sauvegarder les métadonnées
             metadata_path = self.models_dir / 'model_metadata.json'
             with open(metadata_path, 'w') as f:
                 json.dump(new_metadata, f, indent=4)
-            logger.info(f"✅ Métadonnées sauvegardées")
+            logger.info("✅ Métadonnées sauvegardées")
             
             # 5. Uploader vers GCS (si configuré)
             try:

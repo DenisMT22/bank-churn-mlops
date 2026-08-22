@@ -103,7 +103,7 @@ def get_api_health():
         response = requests.get(f"{API_URL}/health", timeout=5)
         if response.status_code == 200:
             return response.json()
-    except:
+    except Exception:
         pass
     return None
 
@@ -114,7 +114,7 @@ def get_model_metrics():
         response = requests.get(f"{API_URL}/metrics", timeout=5)
         if response.status_code == 200:
             return response.json()
-    except:
+    except Exception:
         pass
     return None
 
@@ -359,7 +359,7 @@ elif page == "🔮 Prédiction":
                     'High': 'red'
                 }.get(risk_level, 'gray')
                 
-                st.markdown(f"**Niveau de Risque:**")
+                st.markdown("**Niveau de Risque:**")
                 st.markdown(f"<h3 style='color:{color}'>{risk_level}</h3>", unsafe_allow_html=True)
             
             # Jauge de probabilité
