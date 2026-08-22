@@ -2,21 +2,26 @@
 # meme chose que ce qui tourne en local.
 
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
+exclude = [
+    "venv",
+    ".venv",
+]
+
+# Les notebooks ne sont pas du code de production : ils gardent le style
+# exploratoire de leur redaction. Ruff les analyse depuis la version 0.16,
+# on l'en dispense explicitement.
+extend-exclude = ["*.ipynb"]
+
+[lint]
 # Regles activees : erreurs de style (E) et detection des problemes reels
 # comme les imports ou variables inutilises (F). Les avertissements
 # d'espaces en fin de ligne (W) sont volontairement laisses de cote : ils
 # noieraient le signal utile sous des centaines de lignes sans effet.
 select = ["E", "F"]
 
-exclude = [
-    "venv",
-    ".venv",
-    "notebooks",
-]
-
-[per-file-ignores]
+[lint.per-file-ignores]
 # Les lignes longues des messages d'affichage ne genent pas la lecture.
 "streamlit_app.py" = ["E501"]
 "src/monitoring/evidently_monitor.py" = ["E501"]

@@ -3,4 +3,4 @@
 # dans src/models/retrain.py est protege par un try/except et l'envoi
 # vers Cloud Storage est simplement ignore si le paquet est absent.
 
-google-cloud-storage==2.10.0
+google-cloud-storage==3.13.1

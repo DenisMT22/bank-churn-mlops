@@ -1,7 +1,7 @@
 # Raccourcis pour les taches courantes du projet.
 # Tout fonctionne en local, sans dependance a un service cloud.
 
-PYTHON ?= python3.10
+PYTHON ?= python3.12
 VENV   := venv
 BIN    := $(VENV)/bin
 

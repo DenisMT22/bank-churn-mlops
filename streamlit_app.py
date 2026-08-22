@@ -435,7 +435,7 @@ if page == "🏠 Dashboard":
             height=400
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 # ==============================================================================
@@ -468,7 +468,7 @@ elif page == "🔮 Prédiction":
     
     st.markdown("---")
     
-    if st.button("🔮 Prédire le Churn", type="primary", use_container_width=True):
+    if st.button("🔮 Prédire le Churn", type="primary", width='stretch'):
         # Préparer les données
         customer_data = {
             "credit_score": credit_score,
@@ -538,7 +538,7 @@ elif page == "🔮 Prédiction":
             ))
             
             fig.update_layout(height=300)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # Recommandations
             st.markdown("---")
@@ -615,7 +615,7 @@ elif page == "📊 Monitoring":
             annotation_text="Seuil de décision",
         )
         figure.update_layout(height=380)
-        st.plotly_chart(figure, use_container_width=True)
+        st.plotly_chart(figure, width='stretch')
 
         st.caption(
             "Les deux populations se recouvrent largement : c'est ce recouvrement "
@@ -637,7 +637,7 @@ elif page == "📊 Monitoring":
                 y=["Reste", "Part"],
             )
             figure.update_layout(height=340, coloraxis_showscale=False)
-            st.plotly_chart(figure, use_container_width=True)
+            st.plotly_chart(figure, width='stretch')
             st.caption(
                 f"{matrice[1][1]} départs détectés, {matrice[1][0]} manqués, "
                 f"{matrice[0][1]} fausses alertes."
@@ -651,7 +651,7 @@ elif page == "📊 Monitoring":
                     {"Indicateur": "Colonnes en dérive", "Seuil": "> 30 %", "Action": "Alerte"},
                 ]),
                 hide_index=True,
-                use_container_width=True,
+                width='stretch',
             )
             st.caption(
                 "Seuils définis dans `src/monitoring/evidently_monitor.py`. "
@@ -719,7 +719,7 @@ elif page == "⚙️ Modèle":
             'Statut': ['Archivée', 'Archivée', 'Production']
         })
         
-        st.dataframe(versions_data, use_container_width=True)
+        st.dataframe(versions_data, width='stretch')
         
         # Bouton de réentraînement
         st.markdown("---")

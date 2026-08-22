@@ -10,6 +10,8 @@ Endpoints:
 
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -43,13 +45,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def cycle_de_vie(application: FastAPI):
+    """
+    Chargement du modèle au démarrage.
+
+    Remplace @app.on_event("startup"), déprécié par FastAPI au profit des
+    gestionnaires de cycle de vie.
+    """
+    logger.info("=" * 60)
+    logger.info("🚀 DÉMARRAGE DE L'API CHURN PREDICTION")
+    logger.info("=" * 60)
+
+    if load_model_and_preprocessor():
+        logger.info("✅ API prête à recevoir des requêtes")
+    else:
+        logger.error("❌ Échec du chargement du modèle")
+        logger.error("L'API démarrera mais les prédictions échoueront")
+
+    yield
+
+
 # Initialisation de l'application
 app = FastAPI(
     title="Bank Churn Prediction API",
     description="API de prédiction du churn bancaire avec MLOps",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=cycle_de_vie,
 )
 
 # Configuration CORS
@@ -197,24 +221,6 @@ def prepare_input_data(customer: CustomerFeatures) -> pd.DataFrame:
     data['RowNumber'] = 0
     
     return pd.DataFrame([data])
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Événement exécuté au démarrage de l'API
-    """
-    logger.info("=" * 60)
-    logger.info("🚀 DÉMARRAGE DE L'API CHURN PREDICTION")
-    logger.info("=" * 60)
-    
-    success = load_model_and_preprocessor()
-    
-    if not success:
-        logger.error("❌ Échec du chargement du modèle")
-        logger.error("L'API démarrera mais les prédictions échoueront")
-    else:
-        logger.info("✅ API prête à recevoir des requêtes")
 
 
 @app.get("/", tags=["Root"])

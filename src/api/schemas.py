@@ -4,7 +4,7 @@ Schémas Pydantic pour l'API de prédiction de Churn
 
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Literal
 
 
@@ -21,22 +21,21 @@ class CustomerFeatures(BaseModel):
     estimated_salary: float = Field(..., ge=0, description="Salaire estimé")
     customer_id: Optional[int] = Field(None, description="ID du client")
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "credit_score": 650,
-                "country": "France",
-                "gender": "Female",
-                "age": 35,
-                "tenure": 5,
-                "balance": 125000.0,
-                "products_number": 2,
-                "credit_card": 1,
-                "active_member": 1,
-                "estimated_salary": 50000.0,
-                "customer_id": 15634602
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "credit_score": 650,
+            "country": "France",
+            "gender": "Female",
+            "age": 35,
+            "tenure": 5,
+            "balance": 125000.0,
+            "products_number": 2,
+            "credit_card": 1,
+            "active_member": 1,
+            "estimated_salary": 50000.0,
+            "customer_id": 15634602
         }
+    })
 
 
 class PredictionResponse(BaseModel):
@@ -47,41 +46,39 @@ class PredictionResponse(BaseModel):
     confidence: float = Field(..., ge=0, le=1, description="Niveau de confiance")
     timestamp: str = Field(..., description="Timestamp de la prédiction")
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "customer_id": 15634602,
-                "churn_prediction": 1,
-                "churn_probability": 0.78,
-                "risk_level": "High",
-                "confidence": 0.78,
-                "timestamp": "2025-11-19T14:30:00"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "customer_id": 15634602,
+            "churn_prediction": 1,
+            "churn_probability": 0.78,
+            "risk_level": "High",
+            "confidence": 0.78,
+            "timestamp": "2025-11-19T14:30:00"
         }
+    })
 
 
 class BatchPredictionRequest(BaseModel):
     customers: List[CustomerFeatures] = Field(..., min_items=1, max_items=1000)
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "customers": [
-                    {
-                        "credit_score": 650,
-                        "country": "France",
-                        "gender": "Female",
-                        "age": 35,
-                        "tenure": 5,
-                        "balance": 125000.0,
-                        "products_number": 2,
-                        "credit_card": 1,
-                        "active_member": 1,
-                        "estimated_salary": 50000.0
-                    }
-                ]
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "customers": [
+                {
+                    "credit_score": 650,
+                    "country": "France",
+                    "gender": "Female",
+                    "age": 35,
+                    "tenure": 5,
+                    "balance": 125000.0,
+                    "products_number": 2,
+                    "credit_card": 1,
+                    "active_member": 1,
+                    "estimated_salary": 50000.0
+                }
+            ]
         }
+    })
 
 
 class BatchPredictionResponse(BaseModel):
@@ -109,18 +106,17 @@ class ModelMetrics(BaseModel):
     roc_auc: float
     training_date: str
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "model_name": "XGBoost",
-                "accuracy": 0.8642,
-                "precision": 0.7891,
-                "recall": 0.8123,
-                "f1_score": 0.8005,
-                "roc_auc": 0.9234,
-                "training_date": "2025-11-19"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "model_name": "XGBoost",
+            "accuracy": 0.8642,
+            "precision": 0.7891,
+            "recall": 0.8123,
+            "f1_score": 0.8005,
+            "roc_auc": 0.9234,
+            "training_date": "2025-11-19"
         }
+    })
 
 
 class ErrorResponse(BaseModel):
@@ -128,11 +124,10 @@ class ErrorResponse(BaseModel):
     detail: Optional[str] = Field(None, description="Détails supplémentaires")
     timestamp: str
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "error": "Validation Error",
-                "detail": "credit_score must be between 300 and 900",
-                "timestamp": "2025-11-19T14:30:00"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "error": "Validation Error",
+            "detail": "credit_score must be between 300 and 900",
+            "timestamp": "2025-11-19T14:30:00"
         }
+    })

@@ -94,7 +94,8 @@ class TestPredictions:
     """Forme et plage des sorties."""
 
     @pytest.fixture(scope="class")
-    def predictions(self, modele, preprocessor, jeu_de_test):
+    @staticmethod
+    def predictions(modele, preprocessor, jeu_de_test):
         X_test, _ = jeu_de_test
         X = preprocessor.transform(X_test)
         return modele.predict(X), modele.predict_proba(X)
@@ -159,7 +160,8 @@ class TestMetriquesPubliees:
     """
 
     @pytest.fixture(scope="class")
-    def mesures(self, modele, preprocessor, jeu_de_test):
+    @staticmethod
+    def mesures(modele, preprocessor, jeu_de_test):
         X_test, y_test = jeu_de_test
         predictions = modele.predict(preprocessor.transform(X_test))
         return {
