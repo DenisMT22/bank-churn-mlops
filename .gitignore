@@ -93,3 +93,11 @@ temp/
 
 # Livrables de certification (documents personnels, hors depot)
 Livrables Bloc 4/
+
+# Notes de travail personnelles.
+# Dossier d'architecture, journal d'ingenierie et preparation d'entretien :
+# ces documents me servent a comprendre et a defendre le projet, ils n'ont
+# pas vocation a etre publies avec le code.
+explication.md
+progress.md
+questions-pieges.md
