@@ -1,0 +1,12 @@
+# Classement des langages par GitHub Linguist.
+#
+# Le notebook d'exploration est versionne avec ses sorties pour etre
+# lisible directement sur GitHub : figures, tableaux et resultats
+# s'affichent sans avoir a l'executer. Ces sorties sont encodees en
+# base64 et pesent l'essentiel du fichier, ce qui suffirait a faire
+# classer le depot en Jupyter Notebook alors que le code du projet est
+# en Python.
+#
+# La directive ci-dessous exclut les notebooks du calcul des langages,
+# sans rien changer a leur affichage ni a leur suivi.
+*.ipynb linguist-documentation
